@@ -160,11 +160,11 @@ a:hover { text-decoration: underline; }
 .fill.mut { background: var(--ink-3); }
 
 /* Rep rows */
-.rep { display: grid; grid-template-columns: 190px 1fr 76px; align-items: center; gap: 14px; padding: 9px 0; border-top: 1px solid var(--line-2); }
+.rep { display: grid; grid-template-columns: 200px 1fr 70px; align-items: center; gap: 12px; padding: 5px 0; border-top: 1px solid var(--line-2); }
 .rep:first-child { border-top: 0; }
-.rep .who { display: flex; flex-direction: column; }
-.rep .who .nm { font-weight: 550; font-size: 14px; }
-.rep .who .mt { font-size: 12px; color: var(--ink-3); }
+.rep .who { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.rep .who .nm { font-weight: 550; font-size: 13px; white-space: nowrap; }
+.rep .who .mt { font-size: 11px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rep .load { text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink-2); }
 .badge { display: inline-block; font-size: 10.5px; font-weight: 650; padding: 1px 6px; border-radius: 5px; margin-left: 6px; vertical-align: middle; }
 .badge.ramp { background: var(--warn-soft); color: var(--warn); }
@@ -252,6 +252,32 @@ table.audit tr.row-click.open td { background: var(--brand-soft); border-bottom-
   border-top: 1px dashed var(--line);
 }
 .sim-whynot strong { color: var(--ink); }
+
+/* Sortable table headers */
+table.audit th.sortable { cursor: pointer; user-select: none; }
+table.audit th.sortable:hover { color: var(--ink); }
+table.audit th .arrow { margin-left: 3px; color: var(--brand); font-size: 9px; }
+
+/* Card header with inline sort chips */
+.card-head-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.mini-sort { display: flex; gap: 4px; }
+.mini-sort button {
+  font: inherit; font-size: 11.5px; font-weight: 550; color: var(--ink-2);
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px;
+  padding: 3px 10px; cursor: pointer;
+}
+.mini-sort button:hover { color: var(--ink); }
+.mini-sort button.on { color: var(--brand); background: var(--brand-soft); border-color: transparent; }
+
+/* Lead temperature rows */
+.temp-list { display: flex; flex-direction: column; gap: 14px; }
+.temp-row { display: flex; flex-direction: column; gap: 5px; }
+.temp-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.temp-name { font-size: 13.5px; font-weight: 600; }
+.temp-name em { font-style: normal; font-weight: 400; color: var(--ink-3); font-size: 12px; }
+.temp-count { font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.temp-count em { font-style: normal; color: var(--ink-3); }
+.temp-meaning { font-size: 12.5px; color: var(--ink-2); }
 
 /* Simulator */
 .sim-grid { display: grid; grid-template-columns: 340px 1fr; gap: 16px; align-items: start; }

@@ -64,6 +64,15 @@ function BarList({
 export default function Dashboard() {
   const [auditStatus, setAuditStatus] = useState("all");
   const [showGuide, setShowGuide] = useState(true);
+  const [repSort, setRepSort] = useState<"team" | "most" | "name">("team");
+
+  // "team" keeps the roster's natural grouping (segment, then region).
+  const sortedReps =
+    repSort === "most"
+      ? [...snapshot.reps].sort((a, b) => b.load - a.load)
+      : repSort === "name"
+      ? [...snapshot.reps].sort((a, b) => a.name.localeCompare(b.name))
+      : snapshot.reps;
 
   const jumpToAudit = (status: string) => {
     setAuditStatus(status);
@@ -78,9 +87,6 @@ export default function Dashboard() {
   const methods = snapshot.match_methods
     .map((m) => ({ name: methodLabel(m.method), count: m.count, key: m.method }))
     .sort((a, b) => b.count - a.count);
-
-  const bandColor = (name: string) =>
-    name.startsWith("Hot") ? "good" : name.startsWith("Warm") ? "" : name.startsWith("Cold") ? "warn" : "mut";
 
   const repMaxLoad = Math.max(...snapshot.reps.map((r) => r.load), 1);
   const generated = new Date(snapshot.generated_at);
@@ -245,9 +251,28 @@ export default function Dashboard() {
       <div className="section">
         <div className="grid cols-2">
           <div className="card card-pad">
-            <h2 style={{ marginTop: 0 }}>Who received the leads</h2>
+            <div className="card-head-row">
+              <h2 style={{ margin: 0 }}>Who received the leads</h2>
+              <div className="mini-sort">
+                {(
+                  [
+                    ["team", "By team"],
+                    ["most", "Most leads"],
+                    ["name", "Name"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    className={repSort === key ? "on" : ""}
+                    onClick={() => setRepSort(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div>
-              {snapshot.reps.map((r) => (
+              {sortedReps.map((r) => (
                 <div className="rep" key={r.rep_id}>
                   <div className="who">
                     <span className="nm">
@@ -280,18 +305,43 @@ export default function Dashboard() {
           </div>
           <div className="card card-pad">
             <h2 style={{ marginTop: 0 }}>Lead temperature</h2>
-            <BarList
-              items={snapshot.score_bands.map((b) => ({
-                name: `${bandWord(b.band)} (${b.band === "A" ? "75+" : b.band === "B" ? "50–74" : b.band === "C" ? "30–49" : "under 30"})`,
-                count: b.count,
-              }))}
-              colorFor={(name) => bandColor(name)}
-            />
-            <p style={{ color: "var(--ink-2)", fontSize: 13, marginBottom: 0 }}>
-              Hot leads go to a senior rep right away. Cold leads go to the
-              nurture list instead of taking up a rep&apos;s time. The score decides
-              the route, it isn&apos;t just a report.
+            <p style={{ color: "var(--ink-2)", fontSize: 13, marginTop: 0 }}>
+              Every lead gets a 0–100 score, and the score decides the route.
+              It isn&apos;t just a report.
             </p>
+            <div className="temp-list">
+              {(
+                [
+                  ["A", "75+", "good", "Skips the line — goes straight to a senior rep. Call within 5 minutes."],
+                  ["B", "50–74", "brand", "Assigned right away; the rep follows up the same day."],
+                  ["C", "30–49", "mut", "Assigned to the normal rotation — worked in due course."],
+                  ["D", "under 30", "warn", "Not sent to anyone. Goes to the automated nurture list until it warms up."],
+                ] as const
+              ).map(([band, range, tone, meaning]) => {
+                const count = snapshot.score_bands.find((b) => b.band === band)?.count ?? 0;
+                const max = Math.max(...snapshot.score_bands.map((b) => b.count), 1);
+                return (
+                  <div className="temp-row" key={band}>
+                    <div className="temp-top">
+                      <span className="temp-name">
+                        {bandWord(band)} <em>(score {range})</em>
+                      </span>
+                      <span className="temp-count">
+                        {count.toLocaleString()}
+                        <em> · {Math.round((count / s.total) * 100)}% of leads</em>
+                      </span>
+                    </div>
+                    <div className="track">
+                      <div
+                        className={`fill ${tone === "brand" ? "" : tone}`}
+                        style={{ width: `${(count / max) * 100}%` }}
+                      />
+                    </div>
+                    <div className="temp-meaning">{meaning}</div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

@@ -70,7 +70,7 @@ function downloadCsv(rows: Decision[]) {
 function DetailRow({ d }: { d: Decision }) {
   return (
     <tr className="detail-row">
-      <td colSpan={9}>
+      <td colSpan={10}>
         <div className="detail">
           <div className="detail-col">
             <h4>
@@ -146,9 +146,25 @@ export default function AuditExplorer({
   const [q, setQ] = useState("");
   const [segment, setSegment] = useState("all");
   const [rule, setRule] = useState("all");
-  const [sort, setSort] = useState("arrival");
+  const [sortKey, setSortKey] = useState<"arrival" | "company" | "score" | "wait">("arrival");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [limit, setLimit] = useState(PAGE);
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  // Click a header to sort by it; click again to flip the direction.
+  const sortBy = (key: typeof sortKey) => {
+    if (key === sortKey) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      // Sensible first direction: big numbers first, names A to Z.
+      setSortDir(key === "score" || key === "wait" ? "desc" : "asc");
+    }
+    setLimit(PAGE);
+  };
+
+  const arrow = (key: typeof sortKey) =>
+    sortKey === key ? <span className="arrow">{sortDir === "asc" ? "▲" : "▼"}</span> : null;
 
   // Deep link: /?lead=L000123 opens that lead's full story directly.
   useEffect(() => {
@@ -192,14 +208,16 @@ export default function AuditExplorer({
       }
       return true;
     });
-    // Missing wait times (nurture leads) always sort to the end.
-    const wait = (d: Decision) => d.time_in_queue_min ?? -Infinity;
-    if (sort === "score_high") out.sort((a, b) => b.score - a.score);
-    else if (sort === "score_low") out.sort((a, b) => a.score - b.score);
-    else if (sort === "longest_wait") out.sort((a, b) => wait(b) - wait(a));
-    else if (sort === "company") out.sort((a, b) => a.company.localeCompare(b.company));
+    const dir = sortDir === "asc" ? 1 : -1;
+    // Leads with no wait time (nurture, never assigned) always sort last.
+    const wait = (d: Decision) =>
+      d.time_in_queue_min ?? (sortDir === "asc" ? Infinity : -Infinity);
+    if (sortKey === "score") out.sort((a, b) => dir * (a.score - b.score));
+    else if (sortKey === "wait") out.sort((a, b) => dir * (wait(a) - wait(b)));
+    else if (sortKey === "company") out.sort((a, b) => dir * a.company.localeCompare(b.company));
+    else if (sortDir === "desc") out.reverse(); // arrival, newest first
     return out;
-  }, [decisions, q, status, segment, rule, sort]);
+  }, [decisions, q, status, segment, rule, sortKey, sortDir]);
 
   const shown = filtered.slice(0, limit);
 
@@ -240,13 +258,6 @@ export default function AuditExplorer({
             </option>
           ))}
         </select>
-        <select value={sort} onChange={(e) => { setSort(e.target.value); setLimit(PAGE); }}>
-          <option value="arrival">In order of arrival</option>
-          <option value="score_high">Highest score first</option>
-          <option value="score_low">Lowest score first</option>
-          <option value="longest_wait">Longest wait first</option>
-          <option value="company">Company A to Z</option>
-        </select>
         <button className="csv-btn" onClick={() => downloadCsv(filtered)}>
           Download this view (CSV)
         </button>
@@ -259,10 +270,19 @@ export default function AuditExplorer({
         <table className="audit">
           <thead>
             <tr>
-              <th>Lead</th>
-              <th>Company</th>
+              <th className="sortable" onClick={() => sortBy("arrival")} title="Sort by arrival order">
+                Lead{arrow("arrival")}
+              </th>
+              <th className="sortable" onClick={() => sortBy("company")} title="Sort by company name">
+                Company{arrow("company")}
+              </th>
               <th>Segment / Region</th>
-              <th>Score</th>
+              <th className="sortable" onClick={() => sortBy("score")} title="Sort by score">
+                Score{arrow("score")}
+              </th>
+              <th className="sortable" onClick={() => sortBy("wait")} title="Sort by how long the lead waited">
+                Waited{arrow("wait")}
+              </th>
               <th>Match</th>
               <th>Rule applied</th>
               <th>Went to</th>
@@ -288,6 +308,7 @@ export default function AuditExplorer({
                     <span className="score-tag">{d.score}</span>
                     <span className={`band ${d.band}`}>{bandWord(d.band)}</span>
                   </td>
+                  <td style={{ whiteSpace: "nowrap" }}>{fmtMinutes(d.time_in_queue_min)}</td>
                   <td>{methodLabel(d.match_method)}</td>
                   <td>{ruleLabel(d.rule_fired)}</td>
                   <td>{repName(d.assigned_rep_id) ?? "—"}</td>
