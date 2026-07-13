@@ -1,0 +1,4 @@
+# No third-party dependencies. Runs on the Python standard library (3.9+).
+# sqlite3, difflib, random, statistics, urllib, and json are all stdlib.
+#
+# Run with:  py main.py

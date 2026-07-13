@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+data/routing.db
+data/daily_digest.txt
+.venv/
+.DS_Store
