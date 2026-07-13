@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { bandWord, SIGNALS, statusLabel } from "@/lib/snapshot";
-import { simulate, segmentFor, SimInput, SOURCE_OPTIONS } from "@/lib/simulate";
+import ScoreBars from "@/components/ScoreBars";
+import { bandWord, sourceLabel, SOURCE_OPTIONS, statusLabel } from "@/lib/snapshot";
+import { simulate, segmentFor, SimInput } from "@/lib/simulate";
 
 const DEFAULTS: SimInput = {
   employees: 250,
@@ -10,7 +11,7 @@ const DEFAULTS: SimInput = {
   source: "demo_request",
   pagesViewed: 8,
   trialStarted: false,
-  daysSinceTouch: 1,
+  daysSinceTouch: 0,
   region: "West",
   relationship: "new",
 };
@@ -159,22 +160,36 @@ export default function Simulator() {
             <h2 style={{ marginTop: 0 }}>
               Score: {result.score.total} / 100 ({bandWord(result.score.band)})
             </h2>
-            <div className="bd">
-              {SIGNALS.map((sig) => {
-                const pts = result.score.breakdown[sig.key] ?? 0;
-                return (
-                  <div className="bd-row" key={sig.key}>
-                    <span className="bd-label">{sig.label}</span>
-                    <div className="track">
-                      <div className="fill" style={{ width: `${(pts / sig.max) * 100}%` }} />
-                    </div>
-                    <span className="bd-pts">
-                      {pts} <em>/ {sig.max}</em>
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            <ScoreBars
+              rows={[
+                { key: "source_intent", value: sourceLabel(input.source), pts: result.score.breakdown.source_intent },
+                {
+                  key: "behavioral",
+                  value: `${input.pagesViewed} page${input.pagesViewed === 1 ? "" : "s"} viewed${input.trialStarted ? " · started a trial" : ""}`,
+                  pts: result.score.breakdown.behavioral,
+                },
+                {
+                  key: "seniority",
+                  value: input.seniority[0].toUpperCase() + input.seniority.slice(1),
+                  pts: result.score.breakdown.seniority,
+                },
+                {
+                  key: "firmographic",
+                  value: `${input.employees.toLocaleString()} employees`,
+                  pts: result.score.breakdown.firmographic,
+                },
+                {
+                  key: "recency",
+                  value:
+                    input.daysSinceTouch === 0
+                      ? "Active today"
+                      : input.daysSinceTouch === 1
+                      ? "Active yesterday"
+                      : `Last active ${input.daysSinceTouch} days ago`,
+                  pts: result.score.breakdown.recency,
+                },
+              ]}
+            />
           </div>
 
           <div className="card card-pad">

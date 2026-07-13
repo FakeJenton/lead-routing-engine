@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
+import ScoreBars from "@/components/ScoreBars";
 import {
   bandWord,
   Decision,
@@ -9,32 +10,13 @@ import {
   nextStep,
   repName,
   ruleLabel,
+  signalValue,
+  sourceLabel,
   statusLabel,
   SIGNALS,
 } from "@/lib/snapshot";
 
 const PAGE = 40;
-
-function ScoreBreakdown({ d }: { d: Decision }) {
-  return (
-    <div className="bd">
-      {SIGNALS.map((s) => {
-        const pts = d.score_breakdown?.[s.key] ?? 0;
-        return (
-          <div className="bd-row" key={s.key}>
-            <span className="bd-label">{s.label}</span>
-            <div className="track">
-              <div className="fill" style={{ width: `${(pts / s.max) * 100}%` }} />
-            </div>
-            <span className="bd-pts">
-              {pts} <em>/ {s.max}</em>
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 function DetailRow({ d }: { d: Decision }) {
   return (
@@ -45,7 +27,13 @@ function DetailRow({ d }: { d: Decision }) {
             <h4>
               Why this score: {d.score} / 100 ({bandWord(d.band)})
             </h4>
-            <ScoreBreakdown d={d} />
+            <ScoreBars
+              rows={SIGNALS.map((s) => ({
+                key: s.key,
+                value: signalValue(d, s.key),
+                pts: d.score_breakdown?.[s.key] ?? 0,
+              }))}
+            />
           </div>
           <div className="detail-col">
             <h4>About the lead</h4>
@@ -61,7 +49,7 @@ function DetailRow({ d }: { d: Decision }) {
                   : "—"}
               </dd>
               <dt>Came from</dt>
-              <dd>{d.source.replace(/_/g, " ")}</dd>
+              <dd>{sourceLabel(d.source)}</dd>
               <dt>State</dt>
               <dd>{d.state || "—"}</dd>
               <dt>Email type</dt>

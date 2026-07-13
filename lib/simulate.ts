@@ -33,18 +33,6 @@ const SOURCE_INTENT: Record<string, number> = {
   cold_list: 0.15,
 };
 
-export const SOURCE_OPTIONS: { value: string; label: string }[] = [
-  { value: "demo_request", label: "Asked for a demo" },
-  { value: "free_trial", label: "Started a free trial" },
-  { value: "contact_sales", label: "Clicked “Contact sales”" },
-  { value: "pricing_page", label: "Viewed the pricing page" },
-  { value: "webinar", label: "Attended a webinar" },
-  { value: "outbound_sequence", label: "Replied to our outreach" },
-  { value: "content_download", label: "Downloaded a guide" },
-  { value: "newsletter", label: "Signed up for the newsletter" },
-  { value: "cold_list", label: "Came from a purchased list" },
-];
-
 const SENIORITY_SCALE: Record<string, number> = {
   executive: 1.0,
   director: 0.9,

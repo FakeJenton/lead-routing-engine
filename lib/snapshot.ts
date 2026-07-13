@@ -53,6 +53,9 @@ export type Decision = {
   employee_count: number;
   state: string;
   is_personal_email: boolean;
+  pages_viewed: number;
+  trial_started: boolean;
+  days_since_touch: number;
 };
 
 export type Snapshot = {
@@ -121,15 +124,61 @@ export const fmtMinutes = (m: number | null | undefined) => {
   return `${Math.round(m * 10) / 10} min`;
 };
 
-// Signal groups in the score breakdown, with the max points each can
-// contribute (mirrors SCORE_WEIGHTS in engine/config.py).
-export const SIGNALS: { key: string; label: string; max: number }[] = [
-  { key: "source_intent", label: "How they found us", max: 30 },
-  { key: "behavioral", label: "Product engagement", max: 25 },
-  { key: "seniority", label: "Contact's role", max: 20 },
-  { key: "firmographic", label: "Company size", max: 20 },
-  { key: "recency", label: "How recent", max: 5 },
+// One vocabulary for the five scoring signals, used identically on the
+// dashboard, the simulator, and the How-it-works page: plain name first,
+// the technical term in parentheses. Max points mirror SCORE_WEIGHTS in
+// engine/config.py.
+export const SIGNALS: { key: string; label: string; tech: string; max: number }[] = [
+  { key: "source_intent", label: "How they found us", tech: "source intent", max: 30 },
+  { key: "behavioral", label: "Product engagement", tech: "behavioral", max: 25 },
+  { key: "seniority", label: "Contact's role", tech: "seniority", max: 20 },
+  { key: "firmographic", label: "Company size", tech: "firmographic", max: 20 },
+  { key: "recency", label: "How recent", tech: "recency", max: 5 },
 ];
+
+// Friendly names for lead sources, shared by the audit trail and simulator.
+export const SOURCE_OPTIONS: { value: string; label: string }[] = [
+  { value: "demo_request", label: "Asked for a demo" },
+  { value: "free_trial", label: "Started a free trial" },
+  { value: "contact_sales", label: "Clicked “Contact sales”" },
+  { value: "pricing_page", label: "Viewed the pricing page" },
+  { value: "webinar", label: "Attended a webinar" },
+  { value: "outbound_sequence", label: "Replied to our outreach" },
+  { value: "content_download", label: "Downloaded a guide" },
+  { value: "newsletter", label: "Signed up for the newsletter" },
+  { value: "cold_list", label: "Came from a purchased list" },
+];
+const SOURCE_LABELS: Record<string, string> = Object.fromEntries(
+  SOURCE_OPTIONS.map((o) => [o.value, o.label])
+);
+export const sourceLabel = (s: string) => SOURCE_LABELS[s] ?? s.replace(/_/g, " ");
+
+const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+// The actual logged value behind each scoring signal, e.g.
+// "Contact's role (seniority): Executive".
+export const signalValue = (d: Decision, key: string): string => {
+  switch (key) {
+    case "source_intent":
+      return sourceLabel(d.source);
+    case "seniority":
+      return cap(d.seniority);
+    case "firmographic":
+      return d.employee_count != null
+        ? `${d.employee_count.toLocaleString()} employees`
+        : "size unknown";
+    case "behavioral": {
+      const pages = `${d.pages_viewed ?? 0} page${d.pages_viewed === 1 ? "" : "s"} viewed`;
+      return d.trial_started ? `${pages} · started a trial` : pages;
+    }
+    case "recency":
+      if (d.days_since_touch === 0) return "Active today";
+      if (d.days_since_touch === 1) return "Active yesterday";
+      return `Last active ${d.days_since_touch} days ago`;
+    default:
+      return "";
+  }
+};
 
 // Every lead gets a recommended next step — a decision without an action is
 // just trivia.

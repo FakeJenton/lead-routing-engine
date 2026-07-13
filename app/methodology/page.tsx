@@ -133,11 +133,11 @@ export default function Methodology() {
           </tr>
         </thead>
         <tbody>
-          <tr><td>Source intent</td><td>30</td><td>Lead source (demo request &gt; pricing view &gt; newsletter)</td></tr>
-          <tr><td>Seniority</td><td>20</td><td>Executive &gt; director &gt; manager &gt; individual</td></tr>
-          <tr><td>Company size</td><td>20</td><td>Employee count</td></tr>
-          <tr><td>Behavioral</td><td>25</td><td>Pages viewed, trial started</td></tr>
-          <tr><td>Recency</td><td>5</td><td>Days since last engagement</td></tr>
+          <tr><td>How they found us (source intent)</td><td>30</td><td>Asked for a demo &gt; viewed pricing &gt; newsletter signup</td></tr>
+          <tr><td>Product engagement (behavioral)</td><td>25</td><td>Pages viewed, trial started</td></tr>
+          <tr><td>Contact&apos;s role (seniority)</td><td>20</td><td>Executive &gt; director &gt; manager &gt; individual</td></tr>
+          <tr><td>Company size (firmographic)</td><td>20</td><td>Employee count</td></tr>
+          <tr><td>How recent (recency)</td><td>5</td><td>Days since last activity</td></tr>
         </tbody>
       </table>
       <p>

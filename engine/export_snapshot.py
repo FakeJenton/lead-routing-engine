@@ -33,7 +33,8 @@ def _counts(rows, key):
 def build_snapshot(conn):
     decisions = [dict(r) for r in conn.execute(
         """SELECT d.*, l.company_name, l.state, l.lead_source, l.seniority,
-                  l.job_title, l.industry, l.employee_count, l.is_personal_email
+                  l.job_title, l.industry, l.employee_count, l.is_personal_email,
+                  l.pages_viewed, l.trial_started, l.days_since_touch
            FROM routing_decisions d JOIN leads l ON l.lead_id = d.lead_id"""
     ).fetchall()]
 
@@ -163,6 +164,9 @@ def build_snapshot(conn):
             "employee_count": d["employee_count"],
             "state": d["state"],
             "is_personal_email": bool(d["is_personal_email"]),
+            "pages_viewed": d["pages_viewed"],
+            "trial_started": bool(d["trial_started"]),
+            "days_since_touch": d["days_since_touch"],
         } for d in decisions],
     }
     return snapshot
