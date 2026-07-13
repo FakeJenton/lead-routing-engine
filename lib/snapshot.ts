@@ -26,7 +26,8 @@ export type Rep = {
   seniority: string;
   is_ramping: boolean;
   capacity: number;
-  load: number;
+  load: number;      // everything the rep received, including owned accounts
+  pool_load: number; // only shared-pool leads — what counts against capacity
 };
 
 export type Decision = {
@@ -61,7 +62,7 @@ export type Snapshot = {
   rules: { rule: string; count: number }[];
   score_bands: { band: string; count: number }[];
   reps: Rep[];
-  alerts: { level: "critical" | "warning"; text: string }[];
+  alerts: { level: "critical" | "warning"; text: string; action: string }[];
   decisions: Decision[];
 };
 
@@ -69,34 +70,81 @@ export const snapshot = raw as Snapshot;
 
 export const pct = (n: number) => `${Math.round(n * 100)}%`;
 
-// Human-friendly labels for the machine rule_fired keys.
+// Plain-English labels for the machine rule_fired keys.
 export const RULE_LABELS: Record<string, string> = {
-  existing_customer_expansion: "Existing customer (expansion)",
-  open_opportunity: "Open opportunity",
-  active_ownership: "Active ownership (within resting period)",
-  nurture_low_score: "Nurture (low score)",
-  pool_round_robin_in_queue: "Round-robin in queue",
-  pool_senior_preferred_in_queue: "Senior-preferred (A-band)",
-  pool_region_overflow: "Region overflow",
-  unrouted_no_capacity: "Unrouted (no capacity)",
+  existing_customer_expansion: "Already a customer → their rep",
+  open_opportunity: "Deal in progress → deal's rep",
+  active_ownership: "Recently worked → same rep",
+  nurture_low_score: "Low score → nurture list",
+  pool_round_robin_in_queue: "Shared fairly across team",
+  pool_senior_preferred_in_queue: "Hot lead → senior rep",
+  pool_region_overflow: "Home team full → other region",
+  unrouted_no_capacity: "Stuck — no rep available",
 };
 
 export const METHOD_LABELS: Record<string, string> = {
-  domain: "Corporate domain",
+  domain: "Company email",
   name_exact: "Exact name",
-  name_fuzzy: "Fuzzy name",
-  none: "No match (net-new)",
+  name_fuzzy: "Similar name",
+  none: "New company",
+};
+
+export const STATUS_LABELS: Record<string, string> = {
+  routed: "Routed",
+  nurture: "Nurture",
+  unrouted: "Stuck",
+};
+
+// Temperature words for score bands — friendlier than "band B".
+export const BAND_WORDS: Record<string, string> = {
+  A: "Hot",
+  B: "Warm",
+  C: "Cool",
+  D: "Cold",
 };
 
 export const ruleLabel = (k: string) => RULE_LABELS[k] ?? k;
 export const methodLabel = (k: string) => METHOD_LABELS[k] ?? k;
+export const statusLabel = (k: string) => STATUS_LABELS[k] ?? k;
+export const bandWord = (b: string) => BAND_WORDS[b] ?? b;
+
+// Rep id -> display name, so "R04" never reaches the reader.
+const repNames: Record<string, string> = Object.fromEntries(
+  snapshot.reps.map((r) => [r.rep_id, r.name])
+);
+export const repName = (id: string | null) => (id ? repNames[id] ?? id : null);
+
+// "0.4m" is engineer-speak; say "24 sec" or "1.9 min".
+export const fmtMinutes = (m: number | null | undefined) => {
+  if (m == null) return "—";
+  if (m < 1) return `${Math.round(m * 60)} sec`;
+  return `${Math.round(m * 10) / 10} min`;
+};
 
 // Signal groups in the score breakdown, with the max points each can
 // contribute (mirrors SCORE_WEIGHTS in engine/config.py).
 export const SIGNALS: { key: string; label: string; max: number }[] = [
-  { key: "source_intent", label: "Source intent", max: 30 },
-  { key: "behavioral", label: "Behavioral", max: 25 },
-  { key: "seniority", label: "Seniority", max: 20 },
-  { key: "firmographic", label: "Firmographic", max: 20 },
-  { key: "recency", label: "Recency", max: 5 },
+  { key: "source_intent", label: "How they found us", max: 30 },
+  { key: "behavioral", label: "Product engagement", max: 25 },
+  { key: "seniority", label: "Contact's role", max: 20 },
+  { key: "firmographic", label: "Company size", max: 20 },
+  { key: "recency", label: "How recent", max: 5 },
 ];
+
+// Every lead gets a recommended next step — a decision without an action is
+// just trivia.
+export const nextStep = (d: Decision): string => {
+  const rep = repName(d.assigned_rep_id) ?? "the assigned rep";
+  if (d.status === "unrouted")
+    return `Assign this lead by hand today — no ${d.segment} rep had room. If this keeps happening, raise that team's lead limits or add a rep.`;
+  if (d.status === "nurture")
+    return "No rep action needed. Leave it in automated follow-up, and revisit if the contact re-engages.";
+  if (d.rule_fired === "existing_customer_expansion")
+    return `${rep} already owns this relationship — reply today and treat it as an expansion conversation.`;
+  if (d.rule_fired === "open_opportunity")
+    return `${rep} should fold this new contact into the deal already in progress.`;
+  if (d.band === "A")
+    return `${rep} should reach out right now — hot leads convert best in the first few minutes.`;
+  if (d.band === "B") return `${rep} should follow up today while interest is fresh.`;
+  return `${rep} can work this in their normal rotation.`;
+};

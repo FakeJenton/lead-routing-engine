@@ -55,6 +55,14 @@ def build_snapshot(conn):
         return round(qt[min(len(qt) - 1, int(p / 100 * len(qt)))], 1)
 
     per_rep, skew_flags = monitor.distribution_report(decisions)
+
+    # Pool-only load per rep: what actually counts against round-robin capacity.
+    # Total load additionally includes owner-continuity routes, which do not.
+    pool_load = {}
+    for d in decisions:
+        if (d["rule_fired"] or "").startswith("pool_") and d["assigned_rep_id"]:
+            pool_load[d["assigned_rep_id"]] = pool_load.get(d["assigned_rep_id"], 0) + 1
+
     reps = []
     for r in conn.execute("SELECT * FROM reps"):
         reps.append({
@@ -62,27 +70,48 @@ def build_snapshot(conn):
             "region": r["region"], "seniority": r["seniority"],
             "is_ramping": bool(r["is_ramping"]), "capacity": r["capacity"],
             "load": per_rep.get(r["rep_id"], 0),
+            "pool_load": pool_load.get(r["rep_id"], 0),
         })
 
-    # Alerts, mirroring monitor.run's guardrail checks.
+    # Alerts, mirroring monitor.run's guardrail checks. Each alert is written in
+    # plain English and carries a recommended action, because a flag without a
+    # next step just creates anxiety.
+    name_of = {r["rep_id"]: r["name"] for r in reps}
     alerts = []
     match_rate = len(matched) / total if total else 0
     override_rate = len(overrides) / len(routed) if routed else 0
     for seg, reg, rid, c, fair in skew_flags:
-        alerts.append({"level": "warning",
-                       "text": f"Distribution skew in {seg}/{reg}: {rid} took {c} leads "
-                               f"vs fair share ~{fair}. Review round-robin weights."})
+        alerts.append({
+            "level": "warning",
+            "text": f"On the {seg} {reg} team, {name_of.get(rid, rid)} received {c} leads, "
+                    f"well above the fair share of about {round(fair)}.",
+            "action": "Check this rep's round-robin weight and whether teammates were "
+                      "marked unavailable or at their limit.",
+        })
     if unrouted:
-        alerts.append({"level": "critical",
-                       "text": f"{len(unrouted)} leads UNROUTED (no capacity). Escalate to "
-                               f"routing owner within "
-                               f"{config.GUARDRAILS['unrouted_escalation_minutes']}m."})
+        alerts.append({
+            "level": "critical",
+            "text": f"{len(unrouted)} leads are stuck with no rep, because every eligible "
+                    f"rep is at their lead limit.",
+            "action": "Assign these leads by hand today, and consider raising the "
+                      "Enterprise team's lead limits or adding a rep.",
+        })
     if override_rate > config.GUARDRAILS["override_rate_alert"]:
-        alerts.append({"level": "warning",
-                       "text": f"Manual override rate {override_rate:.0%} exceeds threshold."})
+        alerts.append({
+            "level": "warning",
+            "text": f"Managers manually re-assigned {override_rate:.0%} of routed leads, "
+                    f"more than expected.",
+            "action": "Find the most-overridden rule and update it. Frequent overrides "
+                      "mean the rules no longer match how the team actually works.",
+        })
     if match_rate < config.GUARDRAILS["min_match_rate_alert"]:
-        alerts.append({"level": "warning",
-                       "text": f"Match rate {match_rate:.0%} below threshold."})
+        alerts.append({
+            "level": "warning",
+            "text": f"Only {match_rate:.0%} of leads were recognized as companies we "
+                    f"already know.",
+            "action": "Review the company-name cleanup rules. A low match rate usually "
+                      "means duplicates are being created.",
+        })
 
     n_accounts = conn.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
 

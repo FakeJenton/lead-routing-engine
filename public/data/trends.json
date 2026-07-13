@@ -1,0 +1,114 @@
+{
+  "generated_at": "2026-07-13T22:50:46+00:00",
+  "sla_minutes": 5,
+  "weeks": [
+    {
+      "routed_pct": 0.938,
+      "match_rate": 0.856,
+      "assign_p50_min": 1.9,
+      "stuck": 16,
+      "override_pct": 0.0661,
+      "slow_pct": 0.0608,
+      "week": "Apr 27"
+    },
+    {
+      "routed_pct": 0.922,
+      "match_rate": 0.876,
+      "assign_p50_min": 2.0,
+      "stuck": 16,
+      "override_pct": 0.0662,
+      "slow_pct": 0.0759,
+      "week": "May 04"
+    },
+    {
+      "routed_pct": 0.915,
+      "match_rate": 0.85,
+      "assign_p50_min": 2.1,
+      "stuck": 15,
+      "override_pct": 0.0863,
+      "slow_pct": 0.0929,
+      "week": "May 11"
+    },
+    {
+      "routed_pct": 0.946,
+      "match_rate": 0.864,
+      "assign_p50_min": 1.9,
+      "stuck": 12,
+      "override_pct": 0.0751,
+      "slow_pct": 0.0571,
+      "week": "May 18"
+    },
+    {
+      "routed_pct": 0.904,
+      "match_rate": 0.855,
+      "assign_p50_min": 2.2,
+      "stuck": 24,
+      "override_pct": 0.0664,
+      "slow_pct": 0.0907,
+      "week": "May 25"
+    },
+    {
+      "routed_pct": 0.933,
+      "match_rate": 0.852,
+      "assign_p50_min": 1.9,
+      "stuck": 17,
+      "override_pct": 0.0686,
+      "slow_pct": 0.0836,
+      "week": "Jun 01"
+    },
+    {
+      "routed_pct": 0.919,
+      "match_rate": 0.834,
+      "assign_p50_min": 2.0,
+      "stuck": 21,
+      "override_pct": 0.0598,
+      "slow_pct": 0.0718,
+      "week": "Jun 08"
+    },
+    {
+      "routed_pct": 0.893,
+      "match_rate": 0.849,
+      "assign_p50_min": 2.0,
+      "stuck": 31,
+      "override_pct": 0.0739,
+      "slow_pct": 0.0985,
+      "week": "Jun 15"
+    },
+    {
+      "routed_pct": 0.917,
+      "match_rate": 0.855,
+      "assign_p50_min": 2.0,
+      "stuck": 20,
+      "override_pct": 0.0742,
+      "slow_pct": 0.0796,
+      "week": "Jun 22"
+    },
+    {
+      "routed_pct": 0.927,
+      "match_rate": 0.835,
+      "assign_p50_min": 2.1,
+      "stuck": 13,
+      "override_pct": 0.0906,
+      "slow_pct": 0.0766,
+      "week": "Jun 29"
+    },
+    {
+      "routed_pct": 0.93,
+      "match_rate": 0.877,
+      "assign_p50_min": 2.0,
+      "stuck": 15,
+      "override_pct": 0.071,
+      "slow_pct": 0.0828,
+      "week": "Jul 06"
+    },
+    {
+      "routed_pct": 0.923,
+      "match_rate": 0.837,
+      "assign_p50_min": 2.1,
+      "stuck": 15,
+      "override_pct": 0.0607,
+      "slow_pct": 0.0986,
+      "week": "Jul 13"
+    }
+  ]
+}

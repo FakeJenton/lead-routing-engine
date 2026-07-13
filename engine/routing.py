@@ -52,6 +52,12 @@ def route_lead(lead, account_index, pool):
         "manual_override": 0,
     }
 
+    def rep_name(rid):
+        rep = pool.reps.get(rid)
+        return rep["name"] if rep else rid
+
+    band_word = {"A": "Hot", "B": "Warm", "C": "Cool", "D": "Cold"}.get(band, band)
+
     # --- Owner-based rules (only when we matched an owned account) ---
     if account and account["owner_rep_id"]:
         owner = account["owner_rep_id"]
@@ -62,37 +68,38 @@ def route_lead(lead, account_index, pool):
         if account["is_customer"]:
             decision.update(rule_fired="existing_customer_expansion",
                             assigned_rep_id=owner, status="routed",
-                            reason=f"Matched existing customer {account['account_id']} "
-                                   f"via {method}; routed to owner {owner} for expansion.")
+                            reason=f"This company is already a customer, so the lead went "
+                                   f"straight to {rep_name(owner)}, who owns the relationship.")
             return decision
 
         if account["has_open_opp"]:
             decision.update(rule_fired="open_opportunity",
                             assigned_rep_id=owner, status="routed",
-                            reason=f"Matched account {account['account_id']} with an open "
-                                   f"opportunity; routed to deal owner {owner}.")
+                            reason=f"There is already an active deal with this company, so the "
+                                   f"lead went to {rep_name(owner)}, who is working that deal.")
             return decision
 
         if last_touch is not None and last_touch <= config.RESTING_PERIOD_DAYS:
             decision.update(rule_fired="active_ownership",
                             assigned_rep_id=owner, status="routed",
-                            reason=f"Account {account['account_id']} last touched {last_touch}d "
-                                   f"ago (<= {config.RESTING_PERIOD_DAYS}d resting period); "
-                                   f"stays with owner {owner}.")
+                            reason=f"{rep_name(owner)} worked this account {last_touch} days ago, "
+                                   f"within the {config.RESTING_PERIOD_DAYS}-day ownership window, "
+                                   f"so the lead stays with them.")
             return decision
 
         # Owned, but past the resting period: fall through to the pool.
-        stale_note = (f"Account {account['account_id']} owner {owner} inactive "
-                      f"{last_touch}d (> {config.RESTING_PERIOD_DAYS}d); ownership reset, "
-                      f"returned to pool. ")
+        stale_note = (f"The previous owner ({rep_name(owner)}) had not touched this account "
+                      f"in {last_touch} days, past the {config.RESTING_PERIOD_DAYS}-day window, "
+                      f"so it went back into the shared pool. ")
     else:
         stale_note = ""
 
     # --- Net-new / stale-owner: score-driven pool routing ---
     if behavior == "nurture":
         decision.update(rule_fired="nurture_low_score", status="nurture",
-                        reason=f"{stale_note}Score {score} (band {band}) below routing "
-                               f"threshold; parked in nurture, no rep assigned.")
+                        reason=f"{stale_note}Scored {score} out of 100 ({band_word}), too low to "
+                               f"send to a rep right now. Added to the nurture list for "
+                               f"automated follow-up.")
         return decision
 
     prefer_senior = (behavior == "prioritize_senior")
@@ -100,14 +107,21 @@ def route_lead(lead, account_index, pool):
 
     if rep_id is None:
         decision.update(rule_fired="unrouted_no_capacity", status="unrouted",
-                        reason=f"{stale_note}No available rep in {segment}/{region} "
-                               f"(all at capacity). Escalate.")
+                        reason=f"{stale_note}Every {segment} rep in the {region} region is at "
+                               f"their lead limit, so this lead is stuck waiting. A manager "
+                               f"needs to step in.")
         return decision
 
-    tag = "high-score A-band, " if prefer_senior else ""
+    if assign_reason == "senior_preferred_in_queue":
+        how = f"scored {score} out of 100 (Hot), so it went to a senior rep"
+    elif assign_reason == "region_overflow":
+        how = (f"scored {score} out of 100 ({band_word}); its home region team was full, "
+               f"so it was sent to another region's team")
+    else:
+        how = (f"scored {score} out of 100 ({band_word}) and was shared fairly across "
+               f"the team")
     decision.update(rule_fired=f"pool_{assign_reason}",
                     assigned_rep_id=rep_id, status="routed",
-                    reason=f"{stale_note}{tag}Net-new {segment}/{region} lead "
-                           f"(score {score}, band {band}); assigned to {rep_id} "
-                           f"via {assign_reason}.")
+                    reason=f"{stale_note}New {segment} lead {how}. "
+                           f"Assigned to {rep_name(rep_id)}.")
     return decision

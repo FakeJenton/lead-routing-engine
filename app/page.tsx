@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import AuditExplorer from "@/components/AuditExplorer";
-import { snapshot, pct, ruleLabel, methodLabel } from "@/lib/snapshot";
+import { bandWord, fmtMinutes, methodLabel, pct, ruleLabel, snapshot } from "@/lib/snapshot";
 
 const s = snapshot.summary;
 
@@ -80,7 +80,7 @@ export default function Dashboard() {
     .sort((a, b) => b.count - a.count);
 
   const bandColor = (name: string) =>
-    name.startsWith("A") ? "good" : name.startsWith("B") ? "" : name.startsWith("D") ? "warn" : "mut";
+    name.startsWith("Hot") ? "good" : name.startsWith("Warm") ? "" : name.startsWith("Cold") ? "warn" : "mut";
 
   const repMaxLoad = Math.max(...snapshot.reps.map((r) => r.load), 1);
   const generated = new Date(snapshot.generated_at);
@@ -107,13 +107,13 @@ export default function Dashboard() {
             <strong>{s.num_reps}</strong> reps across SMB / MidMarket / Enterprise
           </span>
           <span className="chip">
-            resting period <strong>{s.resting_period_days}d</strong>
+            ownership expires after <strong>{s.resting_period_days} days</strong> idle
           </span>
           <span className="chip">
-            SLA <strong>{s.sla_minutes}m</strong>
+            goal: rep assigned within <strong>{s.sla_minutes} min</strong>
           </span>
           <span className="chip">
-            snapshot <strong>{generated.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</strong>
+            data from <strong>{generated.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</strong>
           </span>
         </div>
       </div>
@@ -127,21 +127,21 @@ export default function Dashboard() {
           <div className="guide-kicker">Start here · 2-minute scan</div>
           <ol className="guide-steps">
             <li>
-              <strong>Scan the KPIs</strong> — is leakage concentrated in
-              unrouted leads, or parked in nurture?
+              <strong>Scan the top numbers</strong> — are leads reaching reps
+              quickly, or getting stuck along the way?
             </li>
             <li>
-              <strong>Read the guardrail alerts</strong> — this is what would
-              have paged the routing owner today.
+              <strong>Read the alerts</strong> — each one says what went wrong
+              and what to do about it.
             </li>
             <li>
               <strong>Trace one lead end-to-end</strong> — click any row in the
-              audit trail to see its score breakdown, account match, and the
-              exact rule that fired.
+              audit trail to see its score, how the company was recognized, the
+              rule applied, and the recommended next step.
             </li>
             <li>
-              <strong>Read the methodology</strong> — the full rule graph,
-              matching tiers, and signal dictionary.
+              <strong>Try a lead yourself</strong> — the simulator walks a
+              made-up lead through every rule, live.
             </li>
           </ol>
         </div>
@@ -151,33 +151,33 @@ export default function Dashboard() {
       <div className="section">
         <div className="grid cols-5">
           <Kpi
-            label="Routed"
+            label="Sent to a rep"
             value={pct(s.routed / s.total)}
-            sub={`${s.routed.toLocaleString()} leads`}
+            sub={`${s.routed.toLocaleString()} leads reached a person`}
             tone="good"
             onClick={() => jumpToAudit("routed")}
           />
           <Kpi
-            label="Account match rate"
+            label="Known companies"
             value={pct(s.match_rate)}
-            sub={`${s.matched.toLocaleString()} matched`}
+            sub={`${s.matched.toLocaleString()} matched a company we already know`}
           />
           <Kpi
-            label="Speed-to-lead p50"
-            value={`${s.speed_p50}m`}
-            sub={`p90 ${s.speed_p90}m · p99 ${s.speed_p99}m`}
+            label="Typical time to assign"
+            value={fmtMinutes(s.speed_p50)}
+            sub={`9 in 10 within ${fmtMinutes(s.speed_p90)} · slowest ${fmtMinutes(s.speed_p99)}`}
           />
           <Kpi
-            label="Nurture (low score)"
+            label="On the nurture list"
             value={pct(s.nurture / s.total)}
-            sub={`${s.nurture.toLocaleString()} parked`}
+            sub={`${s.nurture.toLocaleString()} low-score leads in email follow-up`}
             tone="warn"
             onClick={() => jumpToAudit("nurture")}
           />
           <Kpi
-            label="Unrouted"
+            label="Stuck — no rep free"
             value={pct(s.unrouted / s.total)}
-            sub={`${s.unrouted.toLocaleString()} escalated`}
+            sub={`${s.unrouted.toLocaleString()} waiting for a manager`}
             tone={s.unrouted > 0 ? "bad" : "good"}
             onClick={() => jumpToAudit("unrouted")}
           />
@@ -186,17 +186,20 @@ export default function Dashboard() {
 
       {/* Alerts */}
       <div className="section">
-        <h2>Guardrail alerts</h2>
+        <h2>What needs attention</h2>
         <div className="card card-pad">
           {snapshot.alerts.length === 0 ? (
-            <div className="ok-note">All guardrails within thresholds. No alerts.</div>
+            <div className="ok-note">Everything looks healthy today. No action needed.</div>
           ) : (
             snapshot.alerts.map((a, i) => (
               <div className={`alert ${a.level}`} key={i}>
                 <span className="ico">{a.level === "critical" ? "🚨" : "⚠️"}</span>
                 <span className="txt">
-                  <span className="lvl">{a.level}</span>
+                  <span className="lvl">{a.level === "critical" ? "Act today" : "Worth a look"}</span>
                   {a.text}
+                  <span className="alert-action">
+                    <strong>What to do:</strong> {a.action}
+                  </span>
                 </span>
               </div>
             ))
@@ -208,29 +211,31 @@ export default function Dashboard() {
       <div className="section">
         <div className="grid cols-2">
           <div className="card card-pad">
-            <h2 style={{ marginTop: 0 }}>Routing decisions by rule</h2>
+            <h2 style={{ marginTop: 0 }}>Where leads went, and why</h2>
             <BarList
               items={rules}
               colorFor={(name) =>
-                name.startsWith("Unrouted")
+                name.startsWith("Stuck")
                   ? "bad"
-                  : name.startsWith("Nurture")
+                  : name.startsWith("Low score")
                   ? "warn"
-                  : name.startsWith("Region overflow")
+                  : name.startsWith("Home team full")
                   ? "mut"
                   : ""
               }
             />
           </div>
           <div className="card card-pad">
-            <h2 style={{ marginTop: 0 }}>Account match method</h2>
+            <h2 style={{ marginTop: 0 }}>How companies were recognized</h2>
             <BarList
               items={methods}
-              colorFor={(name) => (name.startsWith("No match") ? "mut" : "good")}
+              colorFor={(name) => (name.startsWith("New company") ? "mut" : "good")}
             />
             <p style={{ color: "var(--ink-2)", fontSize: 13, marginBottom: 0 }}>
-              Matching runs domain → exact name → state-gated fuzzy name. Personal
-              email domains are excluded from domain matching.
+              We first check the lead&apos;s company email address, then the exact
+              company name, then similar spellings (only when the state also
+              matches). Personal addresses like gmail can&apos;t identify a company,
+              so those fall back to name checks.
             </p>
           </div>
         </div>
@@ -240,7 +245,7 @@ export default function Dashboard() {
       <div className="section">
         <div className="grid cols-2">
           <div className="card card-pad">
-            <h2 style={{ marginTop: 0 }}>Distribution across reps</h2>
+            <h2 style={{ marginTop: 0 }}>Who received the leads</h2>
             <div>
               {snapshot.reps.map((r) => (
                 <div className="rep" key={r.rep_id}>
@@ -267,24 +272,25 @@ export default function Dashboard() {
               ))}
             </div>
             <p style={{ color: "var(--ink-2)", fontSize: 12.5, marginBottom: 0 }}>
-              Load includes owner-based continuity plus round-robin. Skew alerts
-              evaluate only native round-robin, since ownership cannot be
-              rebalanced.
+              Counts include leads a rep kept because they already own the
+              account, which is why some reps sit above their shared-pool limit.
+              Fairness checks only look at the shared pool, since account
+              ownership can&apos;t be rebalanced.
             </p>
           </div>
           <div className="card card-pad">
-            <h2 style={{ marginTop: 0 }}>Lead score bands</h2>
+            <h2 style={{ marginTop: 0 }}>Lead temperature</h2>
             <BarList
               items={snapshot.score_bands.map((b) => ({
-                name: `Band ${b.band}`,
+                name: `${bandWord(b.band)} (${b.band === "A" ? "75+" : b.band === "B" ? "50–74" : b.band === "C" ? "30–49" : "under 30"})`,
                 count: b.count,
               }))}
-              colorFor={(name) => bandColor(name.replace("Band ", ""))}
+              colorFor={(name) => bandColor(name)}
             />
             <p style={{ color: "var(--ink-2)", fontSize: 13, marginBottom: 0 }}>
-              A-band leads prefer a senior rep in the queue. D-band leads park in
-              nurture instead of consuming capacity. The score is a routing input,
-              not a separate report.
+              Hot leads go to a senior rep right away. Cold leads go to the
+              nurture list instead of taking up a rep&apos;s time. The score decides
+              the route, it isn&apos;t just a report.
             </p>
           </div>
         </div>
@@ -292,12 +298,12 @@ export default function Dashboard() {
 
       {/* Audit explorer */}
       <div className="section" id="audit">
-        <h2>Audit trail explorer</h2>
+        <h2>Every decision, explained</h2>
         <div className="card card-pad">
           <p style={{ marginTop: 0, color: "var(--ink-2)", fontSize: 13.5 }}>
-            Every routing decision, with the rule that fired and a plain-language
-            reason. Click a row for the full breakdown: per-signal score, account
-            match, and assignment detail.
+            Each row is one lead and the plain-English reason it went where it
+            went. Click a row to see the full story: why it got its score, how
+            the company was recognized, and the recommended next step.
           </p>
           <AuditExplorer
             decisions={snapshot.decisions}

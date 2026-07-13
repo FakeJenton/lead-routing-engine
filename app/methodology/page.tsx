@@ -23,25 +23,24 @@ export default function Methodology() {
   return (
     <div className="prose">
       <div className="page-head">
-        <h1>Methodology</h1>
+        <h1>How it works</h1>
         <p>
-          How leads are scored, matched, and routed. This is the institutional
-          reference a routing owner maintains, so a new analyst can understand and
-          safely change the system. The same content ships as{" "}
-          <code>docs/routing_logic.md</code> in the repo.
+          How leads are scored, matched, and routed, written so anyone on the
+          team can understand and safely change the system. The same content
+          ships as <code>docs/routing_logic.md</code> in the repo.
         </p>
       </div>
 
       <h2>The routing decision tree</h2>
       <p>
-        Rules are evaluated top to bottom. The first that fires wins. Each rule is
-        a guardrail against the ones beneath it: never round-robin a current
-        customer to a stranger, never take an active deal from the rep working it.
+        Rules are checked top to bottom. The first that applies wins. Each rule
+        protects the ones beneath it: never hand a current customer to a
+        stranger, never take an active deal from the rep working it.
       </p>
       <div className="flow">
         <Node
           q="Match the lead to a known account"
-          a="Corporate domain → exact normalized name → state-gated fuzzy name. Personal email domains are skipped for domain matching."
+          a="Company email domain → exact company name → similar name (only when the state matches too). Personal addresses like gmail can't identify a company."
         />
         <Node
           n="1"
@@ -68,8 +67,8 @@ export default function Methodology() {
           q="Net-new or reset: what does the score say?"
           a={
             <>
-              Band D → <b>nurture</b> (no rep). Band A → <b>senior rep</b> in
-              queue. Band B/C → <b>round-robin</b> in queue.
+              Cold → <b>nurture list</b> (no rep). Hot → <b>senior rep</b>.
+              Warm and Cool → <b>shared fairly</b> across the team.
             </>
           }
         />
@@ -105,15 +104,15 @@ export default function Methodology() {
           </tr>
           <tr>
             <td>2</td>
-            <td>Exact normalized name</td>
+            <td>Exact company name</td>
             <td>0.95</td>
-            <td>&ldquo;Acme Labs, Inc.&rdquo; and &ldquo;acme labs&rdquo; both normalize to &ldquo;acme labs&rdquo;.</td>
+            <td>&ldquo;Acme Labs, Inc.&rdquo; and &ldquo;acme labs&rdquo; both clean up to the same name.</td>
           </tr>
           <tr>
             <td>3</td>
-            <td>Fuzzy normalized name</td>
+            <td>Similar company name</td>
             <td>0.88 – 0.96</td>
-            <td>Accepted only when state agrees, or similarity is near-perfect. Suppresses false positives from common names.</td>
+            <td>Accepted only when the state matches too, or the spelling is nearly identical. This avoids mixing up companies that share a common name.</td>
           </tr>
         </tbody>
       </table>
@@ -136,14 +135,14 @@ export default function Methodology() {
         <tbody>
           <tr><td>Source intent</td><td>30</td><td>Lead source (demo request &gt; pricing view &gt; newsletter)</td></tr>
           <tr><td>Seniority</td><td>20</td><td>Executive &gt; director &gt; manager &gt; individual</td></tr>
-          <tr><td>Firmographic</td><td>20</td><td>Employee count</td></tr>
+          <tr><td>Company size</td><td>20</td><td>Employee count</td></tr>
           <tr><td>Behavioral</td><td>25</td><td>Pages viewed, trial started</td></tr>
           <tr><td>Recency</td><td>5</td><td>Days since last engagement</td></tr>
         </tbody>
       </table>
       <p>
-        Bands: <code>A</code> 75+, <code>B</code> 50 – 74, <code>C</code> 30 – 49,{" "}
-        <code>D</code> below 30.
+        Temperatures: <code>Hot</code> 75+, <code>Warm</code> 50 – 74,{" "}
+        <code>Cool</code> 30 – 49, <code>Cold</code> below 30.
       </p>
 
       <h2>Guardrails and monitoring</h2>
@@ -161,12 +160,12 @@ export default function Methodology() {
         </thead>
         <tbody>
           <tr>
-            <td>Distribution skew</td>
-            <td>A rep exceeds 1.5× fair share of native round-robin in a queue (thin queues excluded).</td>
+            <td>Unfair distribution</td>
+            <td>A rep receives more than 1.5× their fair share of shared-pool leads (small teams excluded).</td>
           </tr>
           <tr>
-            <td>Speed-to-lead SLA</td>
-            <td>Assignments exceed the {snapshot.summary.sla_minutes}-minute SLA at a high rate.</td>
+            <td>Speed goal</td>
+            <td>Too many leads wait longer than the {snapshot.summary.sla_minutes}-minute assignment goal.</td>
           </tr>
           <tr>
             <td>Unrouted escalation</td>
