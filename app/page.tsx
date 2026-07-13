@@ -62,7 +62,7 @@ function BarList({
 }
 
 export default function Dashboard() {
-  const [auditStatus, setAuditStatus] = useState("all");
+  const [auditStatuses, setAuditStatuses] = useState<string[]>([]);
   const [showGuide, setShowGuide] = useState(true);
   const [repSort, setRepSort] = useState<"team" | "most" | "name">("team");
 
@@ -75,7 +75,7 @@ export default function Dashboard() {
       : snapshot.reps;
 
   const jumpToAudit = (status: string) => {
-    setAuditStatus(status);
+    setAuditStatuses([status]);
     document.getElementById("audit")?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -375,8 +375,8 @@ export default function Dashboard() {
           </p>
           <AuditExplorer
             decisions={snapshot.decisions}
-            status={auditStatus}
-            onStatusChange={setAuditStatus}
+            statuses={auditStatuses}
+            onStatusesChange={setAuditStatuses}
           />
         </div>
       </div>

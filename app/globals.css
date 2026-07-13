@@ -254,6 +254,35 @@ table.audit tr.row-click.open td { background: var(--brand-soft); border-bottom-
 }
 .sim-whynot strong { color: var(--ink); }
 
+/* Multi-select filter dropdowns */
+.msel { position: relative; }
+.msel-btn {
+  font: inherit; font-size: 13.5px; color: var(--ink);
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 11px; cursor: pointer; white-space: nowrap;
+}
+.msel-btn:hover { border-color: var(--ink-3); }
+.msel-btn.active { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
+.msel-caret { color: var(--ink-3); font-size: 10px; margin-left: 2px; }
+.msel-btn.active .msel-caret { color: var(--brand); }
+.msel-panel {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30;
+  min-width: 230px; max-height: 300px; overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; box-shadow: var(--shadow); padding: 6px;
+}
+.msel-opt {
+  display: flex; gap: 9px; align-items: center; font-size: 13px;
+  padding: 7px 9px; border-radius: 7px; cursor: pointer;
+}
+.msel-opt:hover { background: var(--panel-2); }
+.msel-opt input { accent-color: var(--brand); }
+.msel-clear {
+  font: inherit; font-size: 12.5px; font-weight: 550; color: var(--brand);
+  background: none; border: 0; cursor: pointer; padding: 8px 9px 5px;
+  border-top: 1px solid var(--line-2); width: 100%; text-align: left; margin-top: 4px;
+}
+
 /* Sortable table headers */
 table.audit th.sortable { cursor: pointer; user-select: none; }
 table.audit th.sortable:hover { color: var(--ink); }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import ScoreBars from "@/components/ScoreBars";
 import {
   bandWord,
@@ -17,6 +17,78 @@ import {
 } from "@/lib/snapshot";
 
 const PAGE = 40;
+
+// A dropdown of checkboxes, so filters can be combined however the reader
+// wants (e.g. "Stuck + Nurture" or two rules at once). Empty selection = all.
+function MultiSelect({
+  label,
+  options,
+  selected,
+  onChange,
+}: {
+  label: string; // e.g. "outcomes" — shown as "All outcomes" when nothing picked
+  options: { value: string; label: string }[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  const toggle = (value: string) =>
+    onChange(
+      selected.includes(value)
+        ? selected.filter((v) => v !== value)
+        : [...selected, value]
+    );
+
+  const cap = label[0].toUpperCase() + label.slice(1);
+  const text =
+    selected.length === 0
+      ? `All ${label}`
+      : selected.length === 1
+      ? options.find((o) => o.value === selected[0])?.label ?? selected[0]
+      : `${cap}: ${selected.length} picked`;
+
+  return (
+    <div className="msel" ref={ref}>
+      <button
+        type="button"
+        className={`msel-btn ${selected.length ? "active" : ""}`}
+        onClick={() => setOpen(!open)}
+      >
+        {text} <span className="msel-caret">▾</span>
+      </button>
+      {open && (
+        <div className="msel-panel">
+          {options.map((o) => (
+            <label className="msel-opt" key={o.value}>
+              <input
+                type="checkbox"
+                checked={selected.includes(o.value)}
+                onChange={() => toggle(o.value)}
+              />
+              {o.label}
+            </label>
+          ))}
+          {selected.length > 0 && (
+            <button type="button" className="msel-clear" onClick={() => onChange([])}>
+              Clear — show all
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function CopyLink({ leadId }: { leadId: string }) {
   const [copied, setCopied] = useState(false);
@@ -134,25 +206,29 @@ function DetailRow({ d }: { d: Decision }) {
   );
 }
 
+type SortKey =
+  | "arrival" | "company" | "segment" | "score" | "wait"
+  | "match" | "rule" | "rep" | "outcome";
+
 export default function AuditExplorer({
   decisions,
-  status,
-  onStatusChange,
+  statuses,
+  onStatusesChange,
 }: {
   decisions: Decision[];
-  status: string;
-  onStatusChange: (s: string) => void;
+  statuses: string[];
+  onStatusesChange: (s: string[]) => void;
 }) {
   const [q, setQ] = useState("");
-  const [segment, setSegment] = useState("all");
-  const [rule, setRule] = useState("all");
-  const [sortKey, setSortKey] = useState<"arrival" | "company" | "score" | "wait">("arrival");
+  const [segments, setSegments] = useState<string[]>([]);
+  const [rulesPicked, setRulesPicked] = useState<string[]>([]);
+  const [sortKey, setSortKey] = useState<SortKey>("arrival");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [limit, setLimit] = useState(PAGE);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   // Click a header to sort by it; click again to flip the direction.
-  const sortBy = (key: typeof sortKey) => {
+  const sortBy = (key: SortKey) => {
     if (key === sortKey) {
       setSortDir(sortDir === "asc" ? "desc" : "asc");
     } else {
@@ -163,8 +239,15 @@ export default function AuditExplorer({
     setLimit(PAGE);
   };
 
-  const arrow = (key: typeof sortKey) =>
+  const arrow = (key: SortKey) =>
     sortKey === key ? <span className="arrow">{sortDir === "asc" ? "▲" : "▼"}</span> : null;
+
+  const Th = ({ k, children, title }: { k: SortKey; children: React.ReactNode; title: string }) => (
+    <th className="sortable" onClick={() => sortBy(k)} title={title}>
+      {children}
+      {arrow(k)}
+    </th>
+  );
 
   // Deep link: /?lead=L000123 opens that lead's full story directly.
   useEffect(() => {
@@ -196,10 +279,11 @@ export default function AuditExplorer({
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
+    // Empty selection means "all" for every multi-select filter.
     const out = decisions.filter((d) => {
-      if (status !== "all" && d.status !== status) return false;
-      if (segment !== "all" && d.segment !== segment) return false;
-      if (rule !== "all" && d.rule_fired !== rule) return false;
+      if (statuses.length && !statuses.includes(d.status)) return false;
+      if (segments.length && !segments.includes(d.segment)) return false;
+      if (rulesPicked.length && !rulesPicked.includes(d.rule_fired)) return false;
       if (needle) {
         const hay = `${d.lead_id} ${d.company} ${repName(d.assigned_rep_id) ?? ""} ${
           d.matched_account_id ?? ""
@@ -212,12 +296,23 @@ export default function AuditExplorer({
     // Leads with no wait time (nurture, never assigned) always sort last.
     const wait = (d: Decision) =>
       d.time_in_queue_min ?? (sortDir === "asc" ? Infinity : -Infinity);
+    // Text columns sort by what the reader sees on screen, not the raw keys.
+    const text: Partial<Record<SortKey, (d: Decision) => string>> = {
+      company: (d) => d.company,
+      segment: (d) => `${d.segment} ${d.region}`,
+      match: (d) => methodLabel(d.match_method),
+      rule: (d) => ruleLabel(d.rule_fired),
+      rep: (d) => repName(d.assigned_rep_id) ?? "￿", // unassigned last
+      outcome: (d) => statusLabel(d.status),
+    };
     if (sortKey === "score") out.sort((a, b) => dir * (a.score - b.score));
     else if (sortKey === "wait") out.sort((a, b) => dir * (wait(a) - wait(b)));
-    else if (sortKey === "company") out.sort((a, b) => dir * a.company.localeCompare(b.company));
-    else if (sortDir === "desc") out.reverse(); // arrival, newest first
+    else if (text[sortKey]) {
+      const get = text[sortKey]!;
+      out.sort((a, b) => dir * get(a).localeCompare(get(b)));
+    } else if (sortDir === "desc") out.reverse(); // arrival, newest first
     return out;
-  }, [decisions, q, status, segment, rule, sortKey, sortDir]);
+  }, [decisions, q, statuses, segments, rulesPicked, sortKey, sortDir]);
 
   const shown = filtered.slice(0, limit);
 
@@ -232,32 +327,41 @@ export default function AuditExplorer({
             setLimit(PAGE);
           }}
         />
-        <select
-          value={status}
-          onChange={(e) => {
-            onStatusChange(e.target.value);
+        <MultiSelect
+          label="outcomes"
+          options={[
+            { value: "routed", label: "Routed to a rep" },
+            { value: "nurture", label: "Nurture list" },
+            { value: "unrouted", label: "Stuck (no rep)" },
+          ]}
+          selected={statuses}
+          onChange={(next) => {
+            onStatusesChange(next);
             setLimit(PAGE);
           }}
-        >
-          <option value="all">All outcomes</option>
-          <option value="routed">Routed to a rep</option>
-          <option value="nurture">Nurture list</option>
-          <option value="unrouted">Stuck (no rep)</option>
-        </select>
-        <select value={segment} onChange={(e) => { setSegment(e.target.value); setLimit(PAGE); }}>
-          <option value="all">All segments</option>
-          <option value="SMB">SMB</option>
-          <option value="MidMarket">MidMarket</option>
-          <option value="Enterprise">Enterprise</option>
-        </select>
-        <select value={rule} onChange={(e) => { setRule(e.target.value); setLimit(PAGE); }}>
-          <option value="all">All rules</option>
-          {rules.map((r) => (
-            <option key={r} value={r}>
-              {ruleLabel(r)}
-            </option>
-          ))}
-        </select>
+        />
+        <MultiSelect
+          label="segments"
+          options={[
+            { value: "SMB", label: "SMB" },
+            { value: "MidMarket", label: "MidMarket" },
+            { value: "Enterprise", label: "Enterprise" },
+          ]}
+          selected={segments}
+          onChange={(next) => {
+            setSegments(next);
+            setLimit(PAGE);
+          }}
+        />
+        <MultiSelect
+          label="rules"
+          options={rules.map((r) => ({ value: r, label: ruleLabel(r) }))}
+          selected={rulesPicked}
+          onChange={(next) => {
+            setRulesPicked(next);
+            setLimit(PAGE);
+          }}
+        />
         <button className="csv-btn" onClick={() => downloadCsv(filtered)}>
           Download this view (CSV)
         </button>
@@ -270,23 +374,15 @@ export default function AuditExplorer({
         <table className="audit">
           <thead>
             <tr>
-              <th className="sortable" onClick={() => sortBy("arrival")} title="Sort by arrival order">
-                Lead{arrow("arrival")}
-              </th>
-              <th className="sortable" onClick={() => sortBy("company")} title="Sort by company name">
-                Company{arrow("company")}
-              </th>
-              <th>Segment / Region</th>
-              <th className="sortable" onClick={() => sortBy("score")} title="Sort by score">
-                Score{arrow("score")}
-              </th>
-              <th className="sortable" onClick={() => sortBy("wait")} title="Sort by how long the lead waited">
-                Waited{arrow("wait")}
-              </th>
-              <th>Match</th>
-              <th>Rule applied</th>
-              <th>Went to</th>
-              <th>Outcome</th>
+              <Th k="arrival" title="Sort by arrival order">Lead</Th>
+              <Th k="company" title="Sort by company name">Company</Th>
+              <Th k="segment" title="Sort by segment and region">Segment / Region</Th>
+              <Th k="score" title="Sort by score">Score</Th>
+              <Th k="wait" title="Sort by how long the lead waited">Waited</Th>
+              <Th k="match" title="Sort by how the company was recognized">Match</Th>
+              <Th k="rule" title="Sort by the rule applied">Rule applied</Th>
+              <Th k="rep" title="Sort by rep name">Went to</Th>
+              <Th k="outcome" title="Sort by outcome">Outcome</Th>
               <th>Why</th>
             </tr>
           </thead>
