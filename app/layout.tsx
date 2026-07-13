@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Lead Routing Engine",
   description:
-    "A lead scoring, matching, routing, and monitoring system. Synthetic early-education GTM demo.",
+    "A lead scoring, matching, routing, and monitoring system with an auditable decision trail. Synthetic B2B GTM demo.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

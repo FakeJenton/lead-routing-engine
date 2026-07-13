@@ -15,14 +15,15 @@ lead go to that rep?"
 Every lead is placed on two dimensions, computed from its firmographics.
 
 ### Segment (primary)
-Segment is measured by number of centers/locations, because a single in-home
-daycare and a 40-site franchise are entirely different sales motions.
+Segment is measured by employee count, the most common firmographic
+segmentation dimension in B2B SaaS. A 10-person shop and a 5,000-person
+enterprise are entirely different sales motions.
 
-| Segment | Locations | Notes |
+| Segment | Employees | Notes |
 | --- | --- | --- |
-| SMB | 1 to 2 | Highest volume, fastest cycle, most reps. |
-| MidMarket | 3 to 15 | Multi-site operators. |
-| Enterprise | 16+ | Franchises and large chains, senior reps only. |
+| SMB | 1 to 100 | Highest volume, fastest cycle, most reps. |
+| MidMarket | 101 to 1,000 | Multi-team operators, longer cycles. |
+| Enterprise | 1,001+ | Largest deals, senior reps only, deliberately thin bench. |
 
 ### Region (secondary)
 US states roll up to West, Central, or East. Anything non-US is INTL.
@@ -39,7 +40,7 @@ Matching runs in confidence order and stops at the first hit.
 | Tier | Method | Confidence | Notes |
 | --- | --- | --- | --- |
 | 1 | Exact corporate domain | 1.00 | Skipped for personal email domains (gmail, yahoo, etc.), which carry no account signal. |
-| 2 | Exact normalized name | 0.95 | "Bright Wheel Inc." and "brightwheel" both normalize to "bright wheel". |
+| 2 | Exact normalized name | 0.95 | "Acme Labs, Inc." and "acme labs" both normalize to "acme labs". |
 | 3 | Fuzzy normalized name | 0.88 to 0.96 | Accepted only when state agrees, or when similarity is near-perfect (>= 0.96). State gating suppresses false positives from common names. |
 
 **Normalization** (see `normalize.py`): lowercase, strip punctuation, drop legal
@@ -101,8 +102,8 @@ Score is 0 to 100, from five weighted groups (`SCORE_WEIGHTS` in `config.py`).
 | Signal group | Weight | Inputs | Rationale |
 | --- | --- | --- | --- |
 | Source intent | 30 | `lead_source` mapped through `SOURCE_INTENT` | A demo request signals far more intent than a newsletter signup. |
-| Seniority | 20 | `seniority` of the contact (owner > director > manager > individual) | Owners and directors are the economic buyers in early ed. |
-| Firmographic | 20 | `num_locations` (saturates at Enterprise scale) | More centers means a larger deal. |
+| Seniority | 20 | `seniority` of the contact (executive > director > manager > individual) | Executives and directors are the economic buyers. |
+| Firmographic | 20 | `employee_count` (saturates at Enterprise scale) | A larger company means a larger deal. |
 | Behavioral | 25 | `pages_viewed`, `trial_started` | Product engagement is the strongest near-term buying signal. |
 | Recency | 5 | `days_since_touch` | Recent engagement is worth acting on now. |
 

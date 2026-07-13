@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import AuditExplorer from "@/components/AuditExplorer";
 import { snapshot, pct, ruleLabel, methodLabel } from "@/lib/snapshot";
 
@@ -8,17 +11,24 @@ function Kpi({
   value,
   sub,
   tone,
+  onClick,
 }: {
   label: string;
   value: string;
   sub?: string;
   tone?: "good" | "warn" | "bad";
+  onClick?: () => void;
 }) {
   return (
-    <div className="card kpi">
+    <div
+      className={`card kpi ${onClick ? "clickable" : ""}`}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+    >
       <div className="label">{label}</div>
       <div className={`value ${tone ?? ""}`}>{value}</div>
       {sub && <div className="sub">{sub}</div>}
+      {onClick && <div className="kpi-link">View in audit trail →</div>}
     </div>
   );
 }
@@ -52,6 +62,14 @@ function BarList({
 }
 
 export default function Dashboard() {
+  const [auditStatus, setAuditStatus] = useState("all");
+  const [showGuide, setShowGuide] = useState(true);
+
+  const jumpToAudit = (status: string) => {
+    setAuditStatus(status);
+    document.getElementById("audit")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   const rules = snapshot.rules.map((r) => ({
     name: ruleLabel(r.rule),
     count: r.count,
@@ -65,6 +83,7 @@ export default function Dashboard() {
     name.startsWith("A") ? "good" : name.startsWith("B") ? "" : name.startsWith("D") ? "warn" : "mut";
 
   const repMaxLoad = Math.max(...snapshot.reps.map((r) => r.load), 1);
+  const generated = new Date(snapshot.generated_at);
 
   return (
     <>
@@ -72,9 +91,9 @@ export default function Dashboard() {
         <h1>Routing health dashboard</h1>
         <p>
           One run of the routing engine over {s.total.toLocaleString()} synthetic
-          inbound leads for an early-education GTM motion. Each lead is scored,
-          matched against a book of {s.num_accounts} accounts, and routed through
-          an ordered rule graph across {s.num_reps} reps. Every decision is
+          inbound leads for a B2B SaaS pipeline. Each lead is scored, matched
+          against a book of {s.num_accounts} accounts, and routed through an
+          ordered rule graph across {s.num_reps} reps. Every decision is
           auditable below.
         </p>
         <div className="tagrow">
@@ -93,8 +112,40 @@ export default function Dashboard() {
           <span className="chip">
             SLA <strong>{s.sla_minutes}m</strong>
           </span>
+          <span className="chip">
+            snapshot <strong>{generated.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</strong>
+          </span>
         </div>
       </div>
+
+      {/* Start-here guide */}
+      {showGuide && (
+        <div className="guide card">
+          <button className="guide-hide" onClick={() => setShowGuide(false)}>
+            Hide guide ✕
+          </button>
+          <div className="guide-kicker">Start here · 2-minute scan</div>
+          <ol className="guide-steps">
+            <li>
+              <strong>Scan the KPIs</strong> — is leakage concentrated in
+              unrouted leads, or parked in nurture?
+            </li>
+            <li>
+              <strong>Read the guardrail alerts</strong> — this is what would
+              have paged the routing owner today.
+            </li>
+            <li>
+              <strong>Trace one lead end-to-end</strong> — click any row in the
+              audit trail to see its score breakdown, account match, and the
+              exact rule that fired.
+            </li>
+            <li>
+              <strong>Read the methodology</strong> — the full rule graph,
+              matching tiers, and signal dictionary.
+            </li>
+          </ol>
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="section">
@@ -104,6 +155,7 @@ export default function Dashboard() {
             value={pct(s.routed / s.total)}
             sub={`${s.routed.toLocaleString()} leads`}
             tone="good"
+            onClick={() => jumpToAudit("routed")}
           />
           <Kpi
             label="Account match rate"
@@ -120,12 +172,14 @@ export default function Dashboard() {
             value={pct(s.nurture / s.total)}
             sub={`${s.nurture.toLocaleString()} parked`}
             tone="warn"
+            onClick={() => jumpToAudit("nurture")}
           />
           <Kpi
             label="Unrouted"
             value={pct(s.unrouted / s.total)}
             sub={`${s.unrouted.toLocaleString()} escalated`}
             tone={s.unrouted > 0 ? "bad" : "good"}
+            onClick={() => jumpToAudit("unrouted")}
           />
         </div>
       </div>
@@ -237,15 +291,19 @@ export default function Dashboard() {
       </div>
 
       {/* Audit explorer */}
-      <div className="section">
+      <div className="section" id="audit">
         <h2>Audit trail explorer</h2>
         <div className="card card-pad">
           <p style={{ marginTop: 0, color: "var(--ink-2)", fontSize: 13.5 }}>
             Every routing decision, with the rule that fired and a plain-language
-            reason. Filter and search to answer &ldquo;why did this lead go
-            there?&rdquo; for any single lead.
+            reason. Click a row for the full breakdown: per-signal score, account
+            match, and assignment detail.
           </p>
-          <AuditExplorer decisions={snapshot.decisions} />
+          <AuditExplorer
+            decisions={snapshot.decisions}
+            status={auditStatus}
+            onStatusChange={setAuditStatus}
+          />
         </div>
       </div>
     </>

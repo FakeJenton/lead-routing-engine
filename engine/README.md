@@ -6,10 +6,9 @@ without needing either platform. It scores inbound leads, matches them to a
 known book of business, routes them through an ordered rule graph with
 guardrails, and emits a monitored daily digest with alerting.
 
-The domain data is modeled on early education providers (childcare centers,
-preschools, Montessori programs, franchise operators) so the segmentation and
-firmographic signals map to a real early-ed GTM motion rather than a generic
-SaaS example.
+The synthetic data models a standard B2B SaaS pipeline: companies segmented by
+employee count, contacts ranked by seniority, and intent signals spanning demo
+requests through cold lists, so the logic transfers to any GTM motion.
 
 ## Why this exists
 
@@ -65,15 +64,15 @@ net-new or stale-owner: SCORE decides
 
 Full rule definitions and the signal dictionary are in
 [docs/routing_logic.md](docs/routing_logic.md). That file is written as the
-institutional documentation a routing owner would maintain, which is the
-"knowledge infrastructure" deliverable the role calls for.
+institutional documentation a routing owner would maintain: the knowledge
+infrastructure that makes routing a team asset instead of one person's memory.
 
 ## How the pieces fit
 
 | Module | Responsibility |
 | --- | --- |
 | `config.py` | All tunable policy: rep roster, segment thresholds, territory map, resting period, capacity, scoring weights, guardrail thresholds. The engine code never hardcodes policy. |
-| `generate_leads.py` | Synthetic early-ed leads and accounts, with the edge cases that break naive routers (name variants, personal email, missing fields, international). |
+| `generate_leads.py` | Synthetic B2B leads and accounts, with the edge cases that break naive routers (name variants, personal email, missing fields, international). |
 | `scoring.py` | Transparent 0-100 lead score from five weighted signal groups. Feeds routing as an input. |
 | `matching.py` | Lead-to-account matching: exact domain, exact normalized name, then state-gated fuzzy name. |
 | `routing.py` | The ordered rule graph. Produces one decision per lead, each with the rule that fired and a human-readable reason. |
@@ -87,7 +86,7 @@ institutional documentation a routing owner would maintain, which is the
 confidence but useless for personal email (a gmail address tells you nothing
 about which account someone belongs to), so those are excluded from domain
 matching and fall back to name matching. Fuzzy name matching is gated by state,
-because "Sunshine Preschool" exists in every state and name similarity alone
+because "Summit Consulting" exists in every state and name similarity alone
 would create false positives that misroute expansion leads.
 
 **Score is a routing input, not a separate report.** Hot (A-band) leads jump to
@@ -108,21 +107,21 @@ match method and confidence, score and band, the rule that fired, and a plain
 sentence explaining why. That is the difference between a routing system you can
 defend to Sales and a black box.
 
-## Mapping to the role
+## What this demonstrates
 
-- **Lead scoring model from product, behavioral, and firmographic signals** ->
+- **Lead scoring from intent, behavioral, and firmographic signals** ->
   `scoring.py` (source intent, seniority, firmographics, behavioral engagement,
   recency).
 - **Lead routing and distribution logic with guardrails, alerting, monitoring**
   -> `routing.py` + `assignment.py` + `monitor.py`.
-- **Automate recurring analytical workflows (distribution checks, connect-rate
-  diagnostics, resting-period analysis)** -> `monitor.py` runs unattended;
-  resting period is a first-class rule.
+- **Automated recurring workflows (distribution checks, SLA diagnostics,
+  resting-period enforcement)** -> `monitor.py` runs unattended; resting period
+  is a first-class rule.
 - **Knowledge infrastructure (routing docs, signal dictionaries, model
   documentation)** -> [docs/routing_logic.md](docs/routing_logic.md).
-- **A workflow that runs without you touching it** -> `py main.py` on a
+- **A workflow that runs without a human in the loop** -> `py main.py` on a
   scheduler generates the day's leads, routes them, writes the audit log, and
-  posts the digest. No human step in the loop.
+  posts the digest.
 
 ## Roadmap / next steps
 

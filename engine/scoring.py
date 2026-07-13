@@ -33,13 +33,13 @@ def score_lead(lead):
     breakdown["source_intent"] = round(intent * w["source_intent"], 1)
 
     # 2. Seniority of the contact.
-    seniority_scale = {"owner": 1.0, "director": 0.9, "manager": 0.6, "individual": 0.3}
+    seniority_scale = {"executive": 1.0, "director": 0.9, "manager": 0.6, "individual": 0.3}
     s = seniority_scale.get(lead["seniority"], 0.4)
     breakdown["seniority"] = round(s * w["seniority"], 1)
 
-    # 3. Firmographic size (more locations = larger opportunity).
-    loc = lead["num_locations"] or 1
-    firmo = min(loc / 16.0, 1.0)          # saturates at Enterprise scale
+    # 3. Firmographic size (larger company = larger opportunity).
+    employees = lead["employee_count"] or 1
+    firmo = min(employees / 2000.0, 1.0)  # saturates at Enterprise scale
     breakdown["firmographic"] = round(firmo * w["firmographic"], 1)
 
     # 4. Behavioral engagement: pages viewed + trial started.

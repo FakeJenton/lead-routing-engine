@@ -119,8 +119,26 @@ a:hover { text-decoration: underline; }
 .cols-2 { grid-template-columns: 1fr 1fr; }
 @media (max-width: 900px) { .cols-5 { grid-template-columns: repeat(2, 1fr); } .cols-2 { grid-template-columns: 1fr; } }
 
+/* Start-here guide */
+.guide { position: relative; padding: 18px 22px; margin-top: 20px; border-left: 3px solid var(--brand); }
+.guide-kicker {
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--brand); margin-bottom: 10px;
+}
+.guide-steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 7px; }
+.guide-steps li { font-size: 13.5px; color: var(--ink-2); }
+.guide-steps strong { color: var(--ink); font-weight: 600; }
+.guide-hide {
+  position: absolute; top: 12px; right: 14px; font: inherit; font-size: 12px;
+  color: var(--ink-3); background: none; border: 0; cursor: pointer; padding: 4px;
+}
+.guide-hide:hover { color: var(--ink); }
+
 /* KPI tile */
 .kpi { padding: 16px 18px; }
+.kpi.clickable { cursor: pointer; transition: border-color 0.12s ease; }
+.kpi.clickable:hover { border-color: var(--brand); }
+.kpi-link { font-size: 12px; color: var(--brand); font-weight: 550; margin-top: 8px; }
 .kpi .label { font-size: 12.5px; color: var(--ink-3); font-weight: 550; }
 .kpi .value { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin-top: 4px; }
 .kpi .sub { font-size: 12.5px; color: var(--ink-2); margin-top: 2px; }
@@ -189,7 +207,31 @@ table.audit th {
   white-space: nowrap;
 }
 table.audit td { padding: 10px; border-bottom: 1px solid var(--line-2); vertical-align: top; }
-table.audit tr:hover td { background: var(--panel-2); }
+table.audit tr.row-click { cursor: pointer; }
+table.audit tr.row-click:hover td { background: var(--panel-2); }
+table.audit tr.row-click.open td { background: var(--brand-soft); border-bottom-color: transparent; }
+
+/* Expanded decision detail */
+.detail-row td { background: var(--panel-2); padding: 0 10px 14px; }
+.detail {
+  display: grid; grid-template-columns: 1.2fr 1fr 1.3fr; gap: 22px;
+  padding: 14px 12px 4px; border-top: 1px dashed var(--line);
+}
+@media (max-width: 900px) { .detail { grid-template-columns: 1fr; } }
+.detail h4 {
+  margin: 0 0 10px; font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--ink-3); font-weight: 650;
+}
+.detail dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 12.5px; }
+.detail dt { color: var(--ink-3); }
+.detail dd { margin: 0; color: var(--ink); }
+.detail .dim { color: var(--ink-3); }
+.detail-reason { font-size: 12.5px; color: var(--ink-2); margin: 10px 0 0; }
+.bd { display: flex; flex-direction: column; gap: 7px; }
+.bd-row { display: grid; grid-template-columns: 92px 1fr 64px; gap: 10px; align-items: center; }
+.bd-label { font-size: 12px; color: var(--ink-2); }
+.bd-pts { font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; }
+.bd-pts em { color: var(--ink-3); font-style: normal; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: var(--ink-2); }
 .reason { color: var(--ink-2); font-size: 12.5px; max-width: 420px; }
 .score-tag { font-variant-numeric: tabular-nums; font-weight: 600; }

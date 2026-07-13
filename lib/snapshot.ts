@@ -36,7 +36,9 @@ export type Decision = {
   region: string;
   score: number;
   band: string;
+  score_breakdown: Record<string, number>;
   match_method: string;
+  match_confidence: number;
   matched_account_id: string | null;
   rule_fired: string;
   assigned_rep_id: string | null;
@@ -45,13 +47,16 @@ export type Decision = {
   time_in_queue_min: number | null;
   source: string;
   seniority: string;
-  num_locations: number;
+  job_title: string;
+  industry: string;
+  employee_count: number;
   state: string;
   is_personal_email: boolean;
 };
 
 export type Snapshot = {
   summary: Summary;
+  generated_at: string;
   match_methods: { method: string; count: number }[];
   rules: { rule: string; count: number }[];
   score_bands: { band: string; count: number }[];
@@ -85,3 +90,13 @@ export const METHOD_LABELS: Record<string, string> = {
 
 export const ruleLabel = (k: string) => RULE_LABELS[k] ?? k;
 export const methodLabel = (k: string) => METHOD_LABELS[k] ?? k;
+
+// Signal groups in the score breakdown, with the max points each can
+// contribute (mirrors SCORE_WEIGHTS in engine/config.py).
+export const SIGNALS: { key: string; label: string; max: number }[] = [
+  { key: "source_intent", label: "Source intent", max: 30 },
+  { key: "behavioral", label: "Behavioral", max: 25 },
+  { key: "seniority", label: "Seniority", max: 20 },
+  { key: "firmographic", label: "Firmographic", max: 20 },
+  { key: "recency", label: "Recency", max: 5 },
+];

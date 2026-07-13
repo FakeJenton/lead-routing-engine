@@ -58,11 +58,11 @@ def route_all(conn):
     conn.executemany(
         """INSERT OR REPLACE INTO routing_decisions
            (lead_id, matched_account_id, match_method, match_confidence, score,
-            score_band, segment, region, rule_fired, assigned_rep_id, status,
-            reason, time_in_queue_min, manual_override)
+            score_band, score_breakdown, segment, region, rule_fired,
+            assigned_rep_id, status, reason, time_in_queue_min, manual_override)
            VALUES (:lead_id,:matched_account_id,:match_method,:match_confidence,
-            :score,:score_band,:segment,:region,:rule_fired,:assigned_rep_id,
-            :status,:reason,:time_in_queue_min,:manual_override)""",
+            :score,:score_band,:score_breakdown,:segment,:region,:rule_fired,
+            :assigned_rep_id,:status,:reason,:time_in_queue_min,:manual_override)""",
         rows,
     )
     conn.commit()

@@ -107,7 +107,7 @@ export default function Methodology() {
             <td>2</td>
             <td>Exact normalized name</td>
             <td>0.95</td>
-            <td>&ldquo;Bright Wheel Inc.&rdquo; and &ldquo;brightwheel&rdquo; both normalize to &ldquo;bright wheel&rdquo;.</td>
+            <td>&ldquo;Acme Labs, Inc.&rdquo; and &ldquo;acme labs&rdquo; both normalize to &ldquo;acme labs&rdquo;.</td>
           </tr>
           <tr>
             <td>3</td>
@@ -135,8 +135,8 @@ export default function Methodology() {
         </thead>
         <tbody>
           <tr><td>Source intent</td><td>30</td><td>Lead source (demo request &gt; pricing view &gt; newsletter)</td></tr>
-          <tr><td>Seniority</td><td>20</td><td>Owner &gt; director &gt; manager &gt; individual</td></tr>
-          <tr><td>Firmographic</td><td>20</td><td>Number of centers / locations</td></tr>
+          <tr><td>Seniority</td><td>20</td><td>Executive &gt; director &gt; manager &gt; individual</td></tr>
+          <tr><td>Firmographic</td><td>20</td><td>Employee count</td></tr>
           <tr><td>Behavioral</td><td>25</td><td>Pages viewed, trial started</td></tr>
           <tr><td>Recency</td><td>5</td><td>Days since last engagement</td></tr>
         </tbody>

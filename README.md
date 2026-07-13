@@ -6,8 +6,8 @@ A lead **scoring → matching → routing → monitoring** system, with a live
 dashboard. It demonstrates the core primitives behind LeanData / Salesforce lead
 routing (account matching, an ordered rule graph, resting periods, weighted
 round-robin, guardrails, and an auditable trail) without needing either
-platform. The synthetic data is modeled on early-education providers so the
-signals map to a real early-ed GTM motion.
+platform. The synthetic data models a standard B2B SaaS pipeline, so the logic
+transfers to any GTM motion.
 
 ## Two parts
 

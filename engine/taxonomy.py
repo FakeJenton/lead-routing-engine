@@ -17,8 +17,8 @@ def region_for_state(state, country="US"):
     return "INTL"
 
 
-def segment_for_locations(num_locations):
+def segment_for_size(employee_count):
     for name, lo, hi in config.SEGMENT_RULES:
-        if lo <= num_locations <= hi:
+        if lo <= employee_count <= hi:
             return name
     return "SMB"

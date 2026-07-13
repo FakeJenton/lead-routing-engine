@@ -11,10 +11,10 @@ Strategy, in order of confidence:
   1. Exact corporate-domain match. Highest confidence. Skipped entirely for
      personal email domains (gmail etc.), because a gmail address tells you
      nothing about which account the person belongs to.
-  2. Exact normalized-name match. "Bright Wheel Inc." and "brightwheel" both
-     normalize to "bright wheel".
+  2. Exact normalized-name match. "Acme Labs, Inc." and "acme labs" both
+     normalize to "acme labs".
   3. Fuzzy normalized-name match, gated by geography. We only accept a fuzzy
-     name match when the state agrees, because "Sunshine Preschool" exists in
+     name match when the state agrees, because "Summit Consulting" exists in
      every state and name similarity alone would create false positives.
 
 Returns (account_row_or_None, method, confidence).

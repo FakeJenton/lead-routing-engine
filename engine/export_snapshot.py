@@ -12,6 +12,7 @@ Writes: ../public/data/routing_snapshot.json
 
 import json
 import os
+from datetime import datetime, timezone
 
 import config
 import db
@@ -32,7 +33,7 @@ def _counts(rows, key):
 def build_snapshot(conn):
     decisions = [dict(r) for r in conn.execute(
         """SELECT d.*, l.company_name, l.state, l.lead_source, l.seniority,
-                  l.num_locations, l.is_personal_email
+                  l.job_title, l.industry, l.employee_count, l.is_personal_email
            FROM routing_decisions d JOIN leads l ON l.lead_id = d.lead_id"""
     ).fetchall()]
 
@@ -101,6 +102,7 @@ def build_snapshot(conn):
             "num_accounts": n_accounts,
             "resting_period_days": config.RESTING_PERIOD_DAYS,
         },
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "match_methods": [{"method": k, "count": v}
                           for k, v in sorted(_counts(decisions, "match_method").items())],
         "rules": sorted(
@@ -116,7 +118,9 @@ def build_snapshot(conn):
             "company": d["company_name"] or "(no company)",
             "segment": d["segment"], "region": d["region"],
             "score": d["score"], "band": d["score_band"],
+            "score_breakdown": json.loads(d["score_breakdown"] or "{}"),
             "match_method": d["match_method"],
+            "match_confidence": d["match_confidence"],
             "matched_account_id": d["matched_account_id"],
             "rule_fired": d["rule_fired"],
             "assigned_rep_id": d["assigned_rep_id"],
@@ -125,7 +129,9 @@ def build_snapshot(conn):
             "time_in_queue_min": d["time_in_queue_min"],
             "source": d["lead_source"],
             "seniority": d["seniority"],
-            "num_locations": d["num_locations"],
+            "job_title": d["job_title"],
+            "industry": d["industry"],
+            "employee_count": d["employee_count"],
             "state": d["state"],
             "is_personal_email": bool(d["is_personal_email"]),
         } for d in decisions],

@@ -22,16 +22,14 @@ NUM_ACCOUNTS = 600
 # ---------------------------------------------------------------------------
 # Segmentation
 # ---------------------------------------------------------------------------
-# brightwheel sells to early-education providers, so account size is measured
-# in number of centers/locations rather than pure employee count. A single
-# in-home daycare is very different from a 40-site franchise.
-#
-# Segment is the primary routing dimension: reps specialize by segment.
+# Account size is measured by employee count, the most common firmographic
+# segmentation dimension in B2B SaaS. Segment is the primary routing
+# dimension: reps specialize by segment.
 SEGMENT_RULES = [
-    # (segment_name, min_locations, max_locations)
-    ("SMB", 1, 2),
-    ("MidMarket", 3, 15),
-    ("Enterprise", 16, 100000),
+    # (segment_name, min_employees, max_employees)
+    ("SMB", 1, 100),
+    ("MidMarket", 101, 1000),
+    ("Enterprise", 1001, 10_000_000),
 ]
 
 # ---------------------------------------------------------------------------
@@ -51,7 +49,7 @@ US_REGIONS = {
 # If an account was last touched by its owner within this window, a new lead
 # from that account goes back to the same owner (continuity). Past this window,
 # ownership is considered stale and the lead returns to the pool for fresh
-# round-robin. This is the "resting period" the JD calls out by name.
+# round-robin, so leads stop resting forever with a disengaged rep.
 RESTING_PERIOD_DAYS = 90
 
 # ---------------------------------------------------------------------------
@@ -78,8 +76,11 @@ REPS = [
     ("R08", "Marcus Reid",      "MidMarket",  "Central", "America/Chicago",     30, False, "senior"),
     ("R09", "Sofia Romano",     "MidMarket",  "East",    "America/New_York",    30, False, "senior"),
     ("R10", "Nathan Cole",      "MidMarket",  "East",    "America/New_York",    30, True,  "junior"),
-    ("R11", "Aisha Rahman",     "Enterprise", "West",    "America/Los_Angeles", 20, False, "senior"),
-    ("R12", "Ben Carter",       "Enterprise", "East",    "America/New_York",    20, False, "senior"),
+    # The Enterprise bench is deliberately thin (2 reps, low caps): it exercises
+    # the overflow -> unrouted escalation path and gives the monitor a real
+    # capacity breach to alert on.
+    ("R11", "Aisha Rahman",     "Enterprise", "West",    "America/Los_Angeles", 10, False, "senior"),
+    ("R12", "Ben Carter",       "Enterprise", "East",    "America/New_York",    10, False, "senior"),
 ]
 
 # Overflow: if no rep is available in the exact (segment, region) queue, allow
@@ -95,8 +96,8 @@ ALLOW_REGION_OVERFLOW = True
 # depends on the score interface, not how the score is produced.
 SCORE_WEIGHTS = {
     "source_intent": 30,   # demo request > pricing view > content download
-    "seniority":     20,   # owner/director > teacher
-    "firmographic":  20,   # more locations = bigger deal
+    "seniority":     20,   # executive/director > individual contributor
+    "firmographic":  20,   # larger company = bigger deal
     "behavioral":    25,   # trial started, pages viewed
     "recency":       5,    # engaged recently
 }
@@ -158,7 +159,7 @@ PERSONAL_EMAIL_DOMAINS = {
 # Legal suffixes stripped during company-name normalization.
 COMPANY_SUFFIXES = {
     "inc", "llc", "ltd", "corp", "co", "company", "group", "holdings",
-    "llp", "pllc", "pc", "academy", "academies",  # academy kept-cautiously below
+    "llp", "pllc", "pc",
 }
 
 # Path for the SQLite database.

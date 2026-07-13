@@ -19,10 +19,12 @@ Every path records which rule fired and a human-readable reason, so the audit
 log answers "why did this lead go here?" for any single lead.
 """
 
+import json
+
 import config
 import matching
 import scoring
-from taxonomy import region_for_state, segment_for_locations
+from taxonomy import region_for_state, segment_for_size
 
 
 def route_lead(lead, account_index, pool):
@@ -30,7 +32,7 @@ def route_lead(lead, account_index, pool):
     score, band, behavior, breakdown = scoring.score_lead(lead)
 
     # Segment/region for pool routing come from the lead's own firmographics.
-    segment = segment_for_locations(lead["num_locations"] or 1)
+    segment = segment_for_size(lead["employee_count"] or 1)
     region = lead["region"] or region_for_state(lead["state"], lead["country"])
 
     decision = {
@@ -40,6 +42,7 @@ def route_lead(lead, account_index, pool):
         "match_confidence": confidence,
         "score": score,
         "score_band": band,
+        "score_breakdown": json.dumps(breakdown),
         "segment": segment,
         "region": region,
         "rule_fired": None,

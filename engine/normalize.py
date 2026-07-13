@@ -2,10 +2,10 @@
 Normalization helpers shared by the generator and the matcher.
 
 Matching is the hardest part of routing, and almost all of the difficulty is
-here: "Bright Wheel Inc.", "brightwheel", and "The Bright Wheel Academy, LLC"
-are the same account, and a router that cannot see that will create duplicate
-accounts and misroute expansion leads to the wrong rep. These functions are the
-cleanup layer that makes fuzzy matching possible.
+here: "Acme Labs, Inc.", "acmelabs", and "The Acme Labs Group, LLC" are the
+same account, and a router that cannot see that will create duplicate accounts
+and misroute expansion leads to the wrong rep. These functions are the cleanup
+layer that makes fuzzy matching possible.
 """
 
 import re

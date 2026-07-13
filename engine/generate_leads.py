@@ -1,11 +1,11 @@
 """
-Synthetic data generator, tuned to brightwheel's market (early education).
+Synthetic data generator for a generic B2B SaaS pipeline.
 
 The point of a routing engine is how it handles messy reality, so the generator
 deliberately injects the edge cases that break naive routers:
 
-  - Company-name variants of existing accounts ("Sunshine Learning Center" vs
-    "sunshine learning ctr llc") so the fuzzy matcher has something to earn.
+  - Company-name variants of existing accounts ("Northwind Analytics" vs
+    "northwind analytics llc") so the fuzzy matcher has something to earn.
   - Personal email domains (gmail, yahoo) on ~35% of leads, which defeat
     domain-based matching and force a fallback to name matching.
   - Missing fields (no company, no state, no phone) that must not crash routing.
@@ -22,36 +22,39 @@ import string
 import config
 import db
 from normalize import normalize_company, normalize_domain, email_domain, is_personal_email
-from taxonomy import region_for_state, segment_for_locations
+from taxonomy import region_for_state, segment_for_size
 
 rng = random.Random(config.RANDOM_SEED)
 
 # ---------------------------------------------------------------------------
-# Word banks for believable early-education provider names.
+# Word banks for believable B2B company names.
 # ---------------------------------------------------------------------------
-NAME_PREFIX = ["Sunshine", "Little", "Bright", "Happy", "Rainbow", "Discovery",
-               "Kids", "Tiny", "Wonder", "Maple", "Cedar", "Bright Star",
-               "Growing", "First Steps", "Playful", "Acorn", "Bluebird",
-               "Sunflower", "Meadow", "Riverside"]
-NAME_CORE = ["Learning Center", "Academy", "Preschool", "Childcare", "Montessori",
-             "Early Learning", "Day School", "Kids Club", "Learning Lab",
-             "Child Development Center", "Nursery", "Care"]
-NAME_SUFFIX = ["", "Inc", "LLC", "Co", "Group", "Academy"]
+NAME_PREFIX = ["Northwind", "Vertex", "Cobalt", "Harbor", "Atlas", "Lumen",
+               "Summit", "Beacon", "Orion", "Cascade", "Fairview", "Ridgeline",
+               "Silverline", "Pinnacle", "Meridian", "Redwood", "Crescent",
+               "Ironwood", "Bluepeak", "Stonebridge"]
+NAME_CORE = ["Analytics", "Systems", "Labs", "Software", "Technologies",
+             "Solutions", "Data", "Cloud", "Logistics", "Networks",
+             "Digital", "Consulting"]
+NAME_SUFFIX = ["", "Inc", "LLC", "Co", "Corp", "Group"]
 
-INDUSTRIES = ["Childcare", "Preschool", "Montessori", "Head Start",
-              "After-School", "Faith-Based Childcare", "Franchise Childcare"]
+INDUSTRIES = ["Software", "Fintech", "Healthcare", "E-commerce", "Logistics",
+              "Manufacturing", "Professional Services", "Media", "Real Estate",
+              "Hospitality"]
 
 JOB_TITLES = [
-    ("Owner", "owner"),
-    ("Founder", "owner"),
-    ("Center Director", "director"),
-    ("Executive Director", "director"),
-    ("Program Director", "director"),
-    ("Administrator", "manager"),
-    ("Assistant Director", "manager"),
-    ("Lead Teacher", "individual"),
+    ("CEO", "executive"),
+    ("Founder", "executive"),
+    ("COO", "executive"),
+    ("VP of Operations", "director"),
+    ("VP of Sales", "director"),
+    ("Head of Marketing", "director"),
+    ("Director of IT", "director"),
+    ("Operations Manager", "manager"),
     ("Office Manager", "manager"),
-    ("Franchise Owner", "owner"),
+    ("IT Manager", "manager"),
+    ("Business Analyst", "individual"),
+    ("Account Coordinator", "individual"),
 ]
 
 STATES = list(sorted(set().union(*config.US_REGIONS.values())))
@@ -69,8 +72,13 @@ SOURCES_INBOUND = ["demo_request", "pricing_page", "contact_sales", "free_trial"
 SOURCES_OUTBOUND = ["outbound_sequence", "cold_list"]
 
 CAMPAIGNS = ["gg_search_brand", "gg_search_generic", "fb_retargeting",
-             "childcare_webinar_q3", "state_licensing_guide", "referral_program",
-             "conf_naeyc", "outbound_smb_push", None]
+             "product_webinar_q3", "industry_benchmark_report", "referral_program",
+             "conf_saastr", "outbound_smb_push", None]
+
+# Employee-count distribution, weighted toward small companies like a real
+# inbound funnel. Spans all three segments (SMB <= 100 < MidMarket <= 1000 < Ent).
+EMPLOYEE_BUCKETS = [8, 25, 60, 150, 400, 900, 2500, 6000]
+EMPLOYEE_WEIGHTS = [26, 22, 16, 12, 10, 7, 5, 2]
 
 
 def _rand_name():
@@ -86,7 +94,7 @@ def _messy_variant(name):
     s = name
     choice = rng.random()
     if choice < 0.25:
-        s = s.replace("Center", "Ctr").replace("Academy", "Acad")
+        s = s.replace("Technologies", "Tech").replace("Solutions", "Sol")
     elif choice < 0.45:
         s = "The " + s
     elif choice < 0.65:
@@ -94,19 +102,25 @@ def _messy_variant(name):
     elif choice < 0.80:
         s = s.replace(" ", "")            # smushed together
     # Randomly append or drop a legal suffix.
-    if rng.random() < 0.3 and not s.endswith(("Inc", "LLC", "Co")):
+    if rng.random() < 0.3 and not s.endswith(("Inc", "LLC", "Co", "Corp")):
         s = s + ", " + rng.choice(["Inc.", "LLC", "Co."])
     return s
 
 
 def _domain_from_name(name):
     slug = "".join(c for c in name.lower() if c in string.ascii_lowercase)
-    slug = slug[:18] or "provider"
-    return slug + rng.choice([".com", ".org", ".net", ".edu"])
+    slug = slug[:18] or "company"
+    return slug + rng.choice([".com", ".com", ".io", ".net", ".co"])
 
 
 def _phone():
     return f"({rng.randint(200,989)}) {rng.randint(200,989)}-{rng.randint(1000,9999)}"
+
+
+def _employee_count():
+    bucket = rng.choices(EMPLOYEE_BUCKETS, weights=EMPLOYEE_WEIGHTS)[0]
+    # Jitter within the bucket so counts do not all repeat.
+    return max(1, int(bucket * rng.uniform(0.6, 1.4)))
 
 
 # ---------------------------------------------------------------------------
@@ -121,8 +135,8 @@ def generate_accounts(conn):
         name = _rand_name()
         state = rng.choice(STATES)
         region = region_for_state(state)
-        num_locations = rng.choices([1, 2, 4, 8, 20, 45], weights=[40, 25, 15, 10, 7, 3])[0]
-        segment = segment_for_locations(num_locations)
+        employee_count = _employee_count()
+        segment = segment_for_size(employee_count)
         domain = _domain_from_name(name)
         is_customer = 1 if rng.random() < 0.45 else 0
         has_open_opp = 1 if (not is_customer and rng.random() < 0.30) else 0
@@ -186,8 +200,7 @@ def generate_leads(conn, accounts):
         title, seniority = rng.choice(JOB_TITLES)
 
         # Firmographics.
-        num_locations = rng.choices([1, 2, 3, 6, 12, 30], weights=[42, 24, 14, 10, 6, 4])[0]
-        student_count = num_locations * rng.randint(15, 90)
+        employee_count = _employee_count()
 
         # Email: corporate (matchable by domain) or personal (not matchable).
         if use_corp and country == "US":
@@ -230,7 +243,7 @@ def generate_leads(conn, accounts):
             int(is_personal_email(email)), company, normalize_company(company),
             normalize_domain(corp_domain) if corp_domain else "",
             phone, country, state, region, TIMEZONES.get(region, "UTC"),
-            num_locations, student_count, rng.choice(INDUSTRIES), title, seniority,
+            employee_count, rng.choice(INDUSTRIES), title, seniority,
             source, channel, rng.choice(CAMPAIGNS),
             pages_viewed, trial_started, days_since_touch,
         ))

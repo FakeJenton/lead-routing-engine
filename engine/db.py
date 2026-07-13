@@ -76,8 +76,7 @@ def init_db(conn):
             state             TEXT,
             region            TEXT,
             timezone          TEXT,
-            num_locations     INTEGER,
-            student_count     INTEGER,
+            employee_count    INTEGER,
             industry          TEXT,
             job_title         TEXT,
             seniority         TEXT,
@@ -96,6 +95,7 @@ def init_db(conn):
             match_confidence   REAL,
             score              INTEGER,
             score_band         TEXT,
+            score_breakdown    TEXT,       -- JSON: points per signal group
             segment            TEXT,
             region             TEXT,
             rule_fired         TEXT,        -- which routing rule decided this
