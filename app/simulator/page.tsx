@@ -154,6 +154,9 @@ export default function Simulator() {
             <p className="detail-action">
               <strong>Next step:</strong> {result.nextStep}
             </p>
+            <p className="sim-whynot">
+              <strong>What would have changed this?</strong> {result.whyNot}
+            </p>
           </div>
 
           <div className="card card-pad">

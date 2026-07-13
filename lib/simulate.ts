@@ -85,6 +85,7 @@ export type SimResult = {
   finalHeadline: string;
   finalExplanation: string;
   nextStep: string;
+  whyNot: string; // the near-miss: what would have changed this outcome
 };
 
 function eligibleReps(segment: string, region: string | null, seniorOnly: boolean): Rep[] {
@@ -99,6 +100,56 @@ function eligibleReps(segment: string, region: string | null, seniorOnly: boolea
 
 function leastLoaded(reps: Rep[]): Rep {
   return [...reps].sort((a, b) => a.pool_load / a.capacity - b.pool_load / b.capacity)[0];
+}
+
+// The single change that would add the most points, in plain English.
+function biggestLever(input: SimInput, score: SimScore): { text: string; gain: number } {
+  const levers: { text: string; gain: number }[] = [];
+  if (!input.trialStarted) levers.push({ text: "starting a free trial", gain: 10 });
+  if (input.pagesViewed < 20)
+    levers.push({
+      text: "more time on the site",
+      gain: Math.round((1 - Math.min(input.pagesViewed / 20, 1)) * 0.6 * 25),
+    });
+  if (input.seniority !== "executive")
+    levers.push({
+      text: "a more senior contact reaching out",
+      gain: Math.round(20 - (score.breakdown.seniority ?? 0)),
+    });
+  if (input.daysSinceTouch > 0)
+    levers.push({ text: "fresher activity", gain: Math.round(5 - (score.breakdown.recency ?? 0)) });
+  levers.sort((a, b) => b.gain - a.gain);
+  return levers[0] ?? { text: "a stronger source, like a demo request", gain: 0 };
+}
+
+// What would have changed this outcome? Shown alongside every result so the
+// reader learns where the thresholds are, not just where this lead landed.
+function nearMiss(input: SimInput, score: SimScore, status: SimResult["finalStatus"]): string {
+  if (
+    input.relationship === "customer" ||
+    input.relationship === "open_opp" ||
+    input.relationship === "owned_active"
+  ) {
+    return "The score didn't matter here. Relationship rules run first, so even a Cold lead from this company would have gone to the same rep.";
+  }
+  if (status === "unrouted") {
+    return "No lead detail would have changed this. It's a capacity problem: the fix is more room on the team, not a better lead.";
+  }
+  const lever = biggestLever(input, score);
+  if (status === "nurture") {
+    const need = 30 - score.total;
+    return `${need} more point${need === 1 ? "" : "s"} would have sent it to a rep instead of the nurture list. Biggest lever: ${lever.text} (worth about ${lever.gain} points).`;
+  }
+  if (score.band === "A") {
+    const margin = score.total - 75;
+    return `It cleared the Hot threshold (75) by ${margin} point${margin === 1 ? "" : "s"}. A little less engagement and it would have gone into the normal rotation instead of the senior fast lane.`;
+  }
+  const toHot = 75 - score.total;
+  const aboveNurture = score.total - 30;
+  if (toHot <= 15) {
+    return `${toHot} more point${toHot === 1 ? "" : "s"} would have made it Hot and skipped it to a senior rep. Biggest lever: ${lever.text} (worth about ${lever.gain} points).`;
+  }
+  return `It sat comfortably in the middle: ${toHot} points short of the senior fast lane (75), ${aboveNurture} points above the nurture cutoff (30). ${lever.text[0].toUpperCase() + lever.text.slice(1)} would move it most (about ${lever.gain} points).`;
 }
 
 export function simulate(input: SimInput): SimResult {
@@ -122,7 +173,17 @@ export function simulate(input: SimInput): SimResult {
     finalHeadline: string,
     finalExplanation: string,
     nextStep: string
-  ): SimResult => ({ score, segment, steps, finalStatus, finalRep, finalHeadline, finalExplanation, nextStep });
+  ): SimResult => ({
+    score,
+    segment,
+    steps,
+    finalStatus,
+    finalRep,
+    finalHeadline,
+    finalExplanation,
+    nextStep,
+    whyNot: nearMiss(input, score, finalStatus),
+  });
 
   // Rule 1: existing customer.
   if (input.relationship === "customer") {

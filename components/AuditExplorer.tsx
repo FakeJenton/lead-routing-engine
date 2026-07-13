@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import ScoreBars from "@/components/ScoreBars";
 import {
   bandWord,
@@ -17,6 +17,55 @@ import {
 } from "@/lib/snapshot";
 
 const PAGE = 40;
+
+function CopyLink({ leadId }: { leadId: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      className="copy-link"
+      onClick={(e) => {
+        e.stopPropagation();
+        const url = `${window.location.origin}${window.location.pathname}?lead=${leadId}`;
+        navigator.clipboard.writeText(url).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        });
+      }}
+    >
+      {copied ? "Link copied ✓" : "Copy link to this lead"}
+    </button>
+  );
+}
+
+// Turn the filtered view into a spreadsheet-friendly file, same plain-English
+// labels as the screen.
+function downloadCsv(rows: Decision[]) {
+  const esc = (v: string | number | null | undefined) => {
+    const s = v == null ? "" : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const header = [
+    "Lead ID", "Company", "Segment", "Region", "Score", "Temperature",
+    "Company match", "Rule applied", "Went to", "Outcome", "Time to assign",
+    "Why", "Next step",
+  ];
+  const lines = rows.map((d) =>
+    [
+      d.lead_id, d.company, d.segment, d.region, d.score, bandWord(d.band),
+      methodLabel(d.match_method), ruleLabel(d.rule_fired),
+      repName(d.assigned_rep_id) ?? "", statusLabel(d.status),
+      fmtMinutes(d.time_in_queue_min), d.reason, nextStep(d),
+    ].map(esc).join(",")
+  );
+  const blob = new Blob([[header.join(","), ...lines].join("\n")], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "routing-decisions.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
 
 function DetailRow({ d }: { d: Decision }) {
   return (
@@ -77,6 +126,7 @@ function DetailRow({ d }: { d: Decision }) {
             <p className="detail-action">
               <strong>Next step:</strong> {nextStep(d)}
             </p>
+            <CopyLink leadId={d.lead_id} />
           </div>
         </div>
       </td>
@@ -96,8 +146,32 @@ export default function AuditExplorer({
   const [q, setQ] = useState("");
   const [segment, setSegment] = useState("all");
   const [rule, setRule] = useState("all");
+  const [sort, setSort] = useState("arrival");
   const [limit, setLimit] = useState(PAGE);
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  // Deep link: /?lead=L000123 opens that lead's full story directly.
+  useEffect(() => {
+    const leadId = new URLSearchParams(window.location.search).get("lead");
+    if (!leadId) return;
+    const idx = decisions.findIndex((d) => d.lead_id === leadId);
+    if (idx === -1) return;
+    setLimit(Math.max(PAGE, Math.ceil((idx + 1) / PAGE) * PAGE));
+    setExpanded(leadId);
+    setTimeout(() => {
+      document.getElementById(`lead-${leadId}`)?.scrollIntoView({ block: "center" });
+    }, 250);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const toggleExpand = (leadId: string) => {
+    const next = expanded === leadId ? null : leadId;
+    setExpanded(next);
+    const url = new URL(window.location.href);
+    if (next) url.searchParams.set("lead", next);
+    else url.searchParams.delete("lead");
+    window.history.replaceState(null, "", url.toString());
+  };
 
   const rules = useMemo(
     () => Array.from(new Set(decisions.map((d) => d.rule_fired))).sort(),
@@ -106,7 +180,7 @@ export default function AuditExplorer({
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return decisions.filter((d) => {
+    const out = decisions.filter((d) => {
       if (status !== "all" && d.status !== status) return false;
       if (segment !== "all" && d.segment !== segment) return false;
       if (rule !== "all" && d.rule_fired !== rule) return false;
@@ -118,7 +192,14 @@ export default function AuditExplorer({
       }
       return true;
     });
-  }, [decisions, q, status, segment, rule]);
+    // Missing wait times (nurture leads) always sort to the end.
+    const wait = (d: Decision) => d.time_in_queue_min ?? -Infinity;
+    if (sort === "score_high") out.sort((a, b) => b.score - a.score);
+    else if (sort === "score_low") out.sort((a, b) => a.score - b.score);
+    else if (sort === "longest_wait") out.sort((a, b) => wait(b) - wait(a));
+    else if (sort === "company") out.sort((a, b) => a.company.localeCompare(b.company));
+    return out;
+  }, [decisions, q, status, segment, rule, sort]);
 
   const shown = filtered.slice(0, limit);
 
@@ -159,6 +240,16 @@ export default function AuditExplorer({
             </option>
           ))}
         </select>
+        <select value={sort} onChange={(e) => { setSort(e.target.value); setLimit(PAGE); }}>
+          <option value="arrival">In order of arrival</option>
+          <option value="score_high">Highest score first</option>
+          <option value="score_low">Lowest score first</option>
+          <option value="longest_wait">Longest wait first</option>
+          <option value="company">Company A to Z</option>
+        </select>
+        <button className="csv-btn" onClick={() => downloadCsv(filtered)}>
+          Download this view (CSV)
+        </button>
         <span className="count-note">
           {filtered.length.toLocaleString()} of {decisions.length.toLocaleString()} leads
         </span>
@@ -183,10 +274,9 @@ export default function AuditExplorer({
             {shown.map((d) => (
               <Fragment key={d.lead_id}>
                 <tr
+                  id={`lead-${d.lead_id}`}
                   className={`row-click ${expanded === d.lead_id ? "open" : ""}`}
-                  onClick={() =>
-                    setExpanded(expanded === d.lead_id ? null : d.lead_id)
-                  }
+                  onClick={() => toggleExpand(d.lead_id)}
                 >
                   <td className="mono">{d.lead_id}</td>
                   <td>{d.company}</td>
