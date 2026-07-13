@@ -1,5 +1,7 @@
 # Lead Routing Engine
 
+**Live demo: https://lead-routing-engine.vercel.app**
+
 A lead **scoring → matching → routing → monitoring** system, with a live
 dashboard. It demonstrates the core primitives behind LeanData / Salesforce lead
 routing (account matching, an ordered rule graph, resting periods, weighted

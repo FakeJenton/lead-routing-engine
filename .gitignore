@@ -15,3 +15,5 @@ engine/data/daily_digest.txt
 
 # OS
 .DS_Store
+
+.vercel
