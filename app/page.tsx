@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import AuditExplorer from "@/components/AuditExplorer";
-import { bandWord, fmtMinutes, methodLabel, pct, ruleLabel, snapshot } from "@/lib/snapshot";
+import { bandWord, fmtMinutes, methodLabel, pct, ruleLabel, snapshot, SIGNALS } from "@/lib/snapshot";
 
 const s = snapshot.summary;
 
@@ -341,6 +341,24 @@ export default function Dashboard() {
                   </div>
                 );
               })}
+            </div>
+            <div className="ingredients">
+              <h3>What builds the score</h3>
+              {SIGNALS.map((sig) => (
+                <div className="ing-row" key={sig.key}>
+                  <span className="ing-name">
+                    {sig.label} <em>({sig.tech})</em>
+                  </span>
+                  <div className="track">
+                    <div className="fill" style={{ width: `${(sig.max / 30) * 100}%` }} />
+                  </div>
+                  <span className="ing-pts">up to {sig.max} pts</span>
+                </div>
+              ))}
+              <p className="ing-note">
+                Click any lead in the table below to see these five ingredients
+                scored for that lead.
+              </p>
             </div>
           </div>
         </div>
