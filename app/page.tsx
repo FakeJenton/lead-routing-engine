@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import AuditExplorer from "@/components/AuditExplorer";
-import { bandWord, fmtMinutes, methodLabel, pct, ruleLabel, snapshot, SIGNALS } from "@/lib/snapshot";
+import AuditExplorer, { ActiveAlertFilter } from "@/components/AuditExplorer";
+import { Alert, bandWord, fmtMinutes, methodLabel, pct, ruleLabel, snapshot, SIGNALS } from "@/lib/snapshot";
 
 const s = snapshot.summary;
 
@@ -63,6 +63,7 @@ function BarList({
 
 export default function Dashboard() {
   const [auditStatuses, setAuditStatuses] = useState<string[]>([]);
+  const [alertFilter, setAlertFilter] = useState<ActiveAlertFilter | null>(null);
   const [showGuide, setShowGuide] = useState(true);
   const [repSort, setRepSort] = useState<"team" | "most" | "name">("team");
 
@@ -75,7 +76,14 @@ export default function Dashboard() {
       : snapshot.reps;
 
   const jumpToAudit = (status: string) => {
+    setAlertFilter(null);
     setAuditStatuses([status]);
+    document.getElementById("audit")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Clicking an alert shows exactly the leads it's talking about.
+  const jumpToAlertLeads = (a: Alert) => {
+    setAlertFilter({ ...a.filter, chip: a.chip });
     document.getElementById("audit")?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -198,14 +206,28 @@ export default function Dashboard() {
             <div className="ok-note">Everything looks healthy today. No action needed.</div>
           ) : (
             snapshot.alerts.map((a, i) => (
-              <div className={`alert ${a.level}`} key={i}>
-                <span className="ico">{a.level === "critical" ? "🚨" : "⚠️"}</span>
+              <div
+                className={`alert ${a.level} clickable`}
+                key={i}
+                role="button"
+                onClick={() => jumpToAlertLeads(a)}
+              >
+                <span className="ico">
+                  {a.level === "critical" ? "🚨" : a.level === "warning" ? "⚠️" : "👀"}
+                </span>
                 <span className="txt">
-                  <span className="lvl">{a.level === "critical" ? "Act today" : "Worth a look"}</span>
+                  <span className="lvl">
+                    {a.level === "critical"
+                      ? "Act today"
+                      : a.level === "warning"
+                      ? "Worth a look"
+                      : "Keep an eye on"}
+                  </span>
                   {a.text}
                   <span className="alert-action">
                     <strong>What to do:</strong> {a.action}
                   </span>
+                  <span className="alert-see">See these exact leads ↓</span>
                 </span>
               </div>
             ))
@@ -377,6 +399,8 @@ export default function Dashboard() {
             decisions={snapshot.decisions}
             statuses={auditStatuses}
             onStatusesChange={setAuditStatuses}
+            alertFilter={alertFilter}
+            onClearAlertFilter={() => setAlertFilter(null)}
           />
         </div>
       </div>

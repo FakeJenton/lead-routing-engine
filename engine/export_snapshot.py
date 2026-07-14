@@ -75,20 +75,18 @@ def build_snapshot(conn):
         })
 
     # Alerts, mirroring monitor.run's guardrail checks. Each alert is written in
-    # plain English and carries a recommended action, because a flag without a
-    # next step just creates anxiety.
+    # plain English, carries a recommended action, and includes a `filter` spec
+    # so the dashboard can jump straight to the exact leads being described.
     name_of = {r["rep_id"]: r["name"] for r in reps}
+    pool_rules = ["pool_round_robin_in_queue", "pool_senior_preferred_in_queue"]
     alerts = []
     match_rate = len(matched) / total if total else 0
     override_rate = len(overrides) / len(routed) if routed else 0
-    for seg, reg, rid, c, fair in skew_flags:
-        alerts.append({
-            "level": "warning",
-            "text": f"On the {seg} {reg} team, {name_of.get(rid, rid)} received {c} leads, "
-                    f"well above the fair share of about {round(fair)}.",
-            "action": "Check this rep's round-robin weight and whether teammates were "
-                      "marked unavailable or at their limit.",
-        })
+    slow_rate = len(sla_breaches) / len(routed) if routed else 0
+    n_overflow = sum(1 for d in decisions if d["rule_fired"] == "pool_region_overflow")
+    hot_missed = [d for d in decisions
+                  if d["score_band"] == "A" and d["rule_fired"] == "pool_round_robin_in_queue"]
+
     if unrouted:
         alerts.append({
             "level": "critical",
@@ -96,6 +94,28 @@ def build_snapshot(conn):
                     f"rep is at their lead limit.",
             "action": "Assign these leads by hand today, and consider raising the "
                       "Enterprise team's lead limits or adding a rep.",
+            "chip": "stuck with no rep",
+            "filter": {"statuses": ["unrouted"]},
+        })
+    for seg, reg, rid, c, fair in skew_flags:
+        alerts.append({
+            "level": "warning",
+            "text": f"On the {seg} {reg} team, {name_of.get(rid, rid)} received {c} leads, "
+                    f"well above the fair share of about {round(fair)}.",
+            "action": "Check this rep's round-robin weight and whether teammates were "
+                      "marked unavailable or at their limit.",
+            "chip": f"shared-pool leads to {name_of.get(rid, rid)}",
+            "filter": {"rules": pool_rules, "q": name_of.get(rid, rid)},
+        })
+    if slow_rate > 0.05:
+        alerts.append({
+            "level": "warning",
+            "text": f"{len(sla_breaches)} leads waited longer than the {sla}-minute goal "
+                    f"before a rep was assigned ({slow_rate:.0%} of routed leads).",
+            "action": "Look for time-of-day gaps and teams running at their limit. Speed "
+                      "on the first touch is the cheapest win in the funnel.",
+            "chip": f"waited over {sla} min",
+            "filter": {"statuses": ["routed"], "min_wait_min": sla},
         })
     if override_rate > config.GUARDRAILS["override_rate_alert"]:
         alerts.append({
@@ -104,6 +124,8 @@ def build_snapshot(conn):
                     f"more than expected.",
             "action": "Find the most-overridden rule and update it. Frequent overrides "
                       "mean the rules no longer match how the team actually works.",
+            "chip": "manually re-assigned",
+            "filter": {"overridden": True},
         })
     if match_rate < config.GUARDRAILS["min_match_rate_alert"]:
         alerts.append({
@@ -112,6 +134,28 @@ def build_snapshot(conn):
                     f"already know.",
             "action": "Review the company-name cleanup rules. A low match rate usually "
                       "means duplicates are being created.",
+            "chip": "not matched to a known company",
+            "filter": {"match": "none"},
+        })
+    if hot_missed:
+        alerts.append({
+            "level": "info",
+            "text": f"{len(hot_missed)} hot leads went into the normal rotation because "
+                    f"no senior rep had room.",
+            "action": "Consider keeping some senior-rep headroom for hot leads, or "
+                      "promoting a strong mid-level rep into the fast lane.",
+            "chip": "hot leads without a senior rep",
+            "filter": {"band": "A", "rules": ["pool_round_robin_in_queue"]},
+        })
+    if n_overflow and n_overflow / max(len(routed), 1) > 0.02:
+        alerts.append({
+            "level": "info",
+            "text": f"{n_overflow} leads were sent to another region's team because their "
+                    f"home team was full.",
+            "action": "Occasional overflow is healthy. A steady stream from one region "
+                      "means that team is under-staffed.",
+            "chip": "sent out of region",
+            "filter": {"rules": ["pool_region_overflow"]},
         })
 
     n_accounts = conn.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
@@ -167,6 +211,7 @@ def build_snapshot(conn):
             "pages_viewed": d["pages_viewed"],
             "trial_started": bool(d["trial_started"]),
             "days_since_touch": d["days_since_touch"],
+            "manual_override": bool(d["manual_override"]),
         } for d in decisions],
     }
     return snapshot

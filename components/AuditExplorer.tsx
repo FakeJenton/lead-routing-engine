@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import ScoreBars from "@/components/ScoreBars";
 import {
+  AlertFilter,
   bandWord,
   Decision,
   fmtMinutes,
@@ -15,6 +16,8 @@ import {
   statusLabel,
   SIGNALS,
 } from "@/lib/snapshot";
+
+export type ActiveAlertFilter = AlertFilter & { chip: string };
 
 const PAGE = 40;
 
@@ -214,10 +217,14 @@ export default function AuditExplorer({
   decisions,
   statuses,
   onStatusesChange,
+  alertFilter,
+  onClearAlertFilter,
 }: {
   decisions: Decision[];
   statuses: string[];
   onStatusesChange: (s: string[]) => void;
+  alertFilter: ActiveAlertFilter | null;
+  onClearAlertFilter: () => void;
 }) {
   const [q, setQ] = useState("");
   const [segments, setSegments] = useState<string[]>([]);
@@ -263,6 +270,18 @@ export default function AuditExplorer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // When an alert is clicked, its filter becomes the whole view: clear the
+  // manual filters so the count matches the number in the alert exactly.
+  useEffect(() => {
+    if (!alertFilter) return;
+    setQ("");
+    setSegments([]);
+    setRulesPicked([]);
+    onStatusesChange([]);
+    setLimit(PAGE);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alertFilter]);
+
   const toggleExpand = (leadId: string) => {
     const next = expanded === leadId ? null : leadId;
     setExpanded(next);
@@ -279,8 +298,22 @@ export default function AuditExplorer({
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
+    const af = alertFilter;
     // Empty selection means "all" for every multi-select filter.
     const out = decisions.filter((d) => {
+      if (af) {
+        if (af.statuses && !af.statuses.includes(d.status)) return false;
+        if (af.rules && !af.rules.includes(d.rule_fired)) return false;
+        if (af.min_wait_min != null && (d.time_in_queue_min ?? 0) <= af.min_wait_min)
+          return false;
+        if (af.band && d.band !== af.band) return false;
+        if (af.match && d.match_method !== af.match) return false;
+        if (af.overridden && !d.manual_override) return false;
+        if (af.q) {
+          const hay = `${repName(d.assigned_rep_id) ?? ""} ${d.reason}`.toLowerCase();
+          if (!hay.includes(af.q.toLowerCase())) return false;
+        }
+      }
       if (statuses.length && !statuses.includes(d.status)) return false;
       if (segments.length && !segments.includes(d.segment)) return false;
       if (rulesPicked.length && !rulesPicked.includes(d.rule_fired)) return false;
@@ -312,12 +345,21 @@ export default function AuditExplorer({
       out.sort((a, b) => dir * get(a).localeCompare(get(b)));
     } else if (sortDir === "desc") out.reverse(); // arrival, newest first
     return out;
-  }, [decisions, q, statuses, segments, rulesPicked, sortKey, sortDir]);
+  }, [decisions, q, statuses, segments, rulesPicked, sortKey, sortDir, alertFilter]);
 
   const shown = filtered.slice(0, limit);
 
   return (
     <div>
+      {alertFilter && (
+        <div className="afilter">
+          <span>
+            Showing only leads that were <strong>{alertFilter.chip}</strong> —{" "}
+            {filtered.length.toLocaleString()} lead{filtered.length === 1 ? "" : "s"}
+          </span>
+          <button onClick={onClearAlertFilter}>Clear ✕ show all leads</button>
+        </div>
+      )}
       <div className="controls">
         <input
           placeholder="Search by company, lead ID, rep name, or reason..."

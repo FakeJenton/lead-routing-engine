@@ -56,6 +56,27 @@ export type Decision = {
   pages_viewed: number;
   trial_started: boolean;
   days_since_touch: number;
+  manual_override: boolean;
+};
+
+// The lead subset an alert is talking about. Clicking the alert applies this
+// to the audit table so the reader lands on exactly those leads.
+export type AlertFilter = {
+  statuses?: string[];
+  rules?: string[];
+  min_wait_min?: number;
+  band?: string;
+  match?: string;
+  overridden?: boolean;
+  q?: string;
+};
+
+export type Alert = {
+  level: "critical" | "warning" | "info";
+  text: string;
+  action: string;
+  chip: string; // short label shown while the filter is active
+  filter: AlertFilter;
 };
 
 export type Snapshot = {
@@ -65,7 +86,7 @@ export type Snapshot = {
   rules: { rule: string; count: number }[];
   score_bands: { band: string; count: number }[];
   reps: Rep[];
-  alerts: { level: "critical" | "warning"; text: string; action: string }[];
+  alerts: Alert[];
   decisions: Decision[];
 };
 
