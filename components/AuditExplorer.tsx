@@ -121,7 +121,7 @@ function downloadCsv(rows: Decision[]) {
   };
   const header = [
     "Lead ID", "Company", "Segment", "Region", "Score", "Temperature",
-    "Company match", "Rule applied", "Went to", "Outcome", "Time to assign",
+    "Company match", "Rule applied", "Went to", "Outcome", "Time to first contact",
     "Why", "Next step",
   ];
   const lines = rows.map((d) =>
@@ -194,7 +194,7 @@ function DetailRow({ d }: { d: Decision }) {
               <dd>{ruleLabel(d.rule_fired)}</dd>
               <dt>Went to</dt>
               <dd>{repName(d.assigned_rep_id) ?? "no one yet"}</dd>
-              <dt>Time to assign</dt>
+              <dt>Time to first contact</dt>
               <dd>{fmtMinutes(d.time_in_queue_min)}</dd>
             </dl>
             <p className="detail-reason">{d.reason}</p>
@@ -420,7 +420,7 @@ export default function AuditExplorer({
               <Th k="company" title="Sort by company name">Company</Th>
               <Th k="segment" title="Sort by segment and region">Segment / Region</Th>
               <Th k="score" title="Sort by score">Score</Th>
-              <Th k="wait" title="Sort by how long the lead waited">Waited</Th>
+              <Th k="wait" title="Sort by time from lead to first contact">First contact</Th>
               <Th k="match" title="Sort by how the company was recognized">Match</Th>
               <Th k="rule" title="Sort by the rule applied">Rule applied</Th>
               <Th k="rep" title="Sort by rep name">Went to</Th>

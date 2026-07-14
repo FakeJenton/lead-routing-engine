@@ -54,13 +54,13 @@ const METRICS: MetricDef[] = [
   },
   {
     key: "assign_p50_min",
-    title: "Typical time to assign",
-    caption: "How long the middle-of-the-pack lead waited for a rep.",
+    title: "Typical time to first contact",
+    caption: "How long the middle-of-the-pack lead waited before a rep reached out.",
     fmt: (v) => fmtMinutes(v),
     higherIsBetter: false,
     threshold: 0.2,
     actionWhenWorse: "Leads are waiting longer. Check rep availability and team limits.",
-    actionWhenBetter: "Assignment is getting faster. Nothing to fix.",
+    actionWhenBetter: "First contact is getting faster. Nothing to fix.",
     actionWhenSteady: "Consistently fast. No action needed.",
   },
   {
@@ -87,8 +87,8 @@ const METRICS: MetricDef[] = [
   },
   {
     key: "slow_pct",
-    title: "Slow assignments",
-    caption: `Share of routed leads that waited longer than the ${trends.sla_minutes}-minute goal.`,
+    title: "Slow first contact",
+    caption: `Share of routed leads that waited longer than the ${trends.sla_minutes}-minute first-contact goal.`,
     fmt: (v) => `${Math.round(v * 100)}%`,
     higherIsBetter: false,
     threshold: 0.25,

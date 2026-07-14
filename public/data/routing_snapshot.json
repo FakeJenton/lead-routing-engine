@@ -16,7 +16,7 @@
     "num_accounts": 600,
     "resting_period_days": 90
   },
-  "generated_at": "2026-07-14T02:43:35+00:00",
+  "generated_at": "2026-07-14T02:54:13+00:00",
   "match_methods": [
     {
       "method": "domain",
@@ -235,9 +235,9 @@
     },
     {
       "level": "warning",
-      "text": "57 leads waited longer than the 5-minute goal before a rep was assigned (6% of routed leads).",
+      "text": "57 leads waited longer than the 5-minute first-contact goal before a rep reached out (6% of routed leads). Five minutes is the widely cited speed-to-lead benchmark.",
       "action": "Look for time-of-day gaps and teams running at their limit. Speed on the first touch is the cheapest win in the funnel.",
-      "chip": "waited over 5 min",
+      "chip": "contacted after more than 5 min",
       "filter": {
         "statuses": [
           "routed"

@@ -110,11 +110,13 @@ def build_snapshot(conn):
     if slow_rate > 0.05:
         alerts.append({
             "level": "warning",
-            "text": f"{len(sla_breaches)} leads waited longer than the {sla}-minute goal "
-                    f"before a rep was assigned ({slow_rate:.0%} of routed leads).",
+            "text": f"{len(sla_breaches)} leads waited longer than the {sla}-minute "
+                    f"first-contact goal before a rep reached out ({slow_rate:.0%} of "
+                    f"routed leads). Five minutes is the widely cited speed-to-lead "
+                    f"benchmark.",
             "action": "Look for time-of-day gaps and teams running at their limit. Speed "
                       "on the first touch is the cheapest win in the funnel.",
-            "chip": f"waited over {sla} min",
+            "chip": f"contacted after more than {sla} min",
             "filter": {"statuses": ["routed"], "min_wait_min": sla},
         })
     if override_rate > config.GUARDRAILS["override_rate_alert"]:

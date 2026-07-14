@@ -164,8 +164,8 @@ export default function Methodology() {
             <td>A rep receives more than 1.5× their fair share of shared-pool leads (small teams excluded).</td>
           </tr>
           <tr>
-            <td>Speed goal</td>
-            <td>Too many leads wait longer than the {snapshot.summary.sla_minutes}-minute assignment goal.</td>
+            <td>First-contact speed</td>
+            <td>Too many leads wait longer than the {snapshot.summary.sla_minutes}-minute first-contact goal. Five minutes is the widely cited speed-to-lead benchmark for reaching a new lead.</td>
           </tr>
           <tr>
             <td>Unrouted escalation</td>

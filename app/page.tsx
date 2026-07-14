@@ -124,7 +124,7 @@ export default function Dashboard() {
             ownership expires after <strong>{s.resting_period_days} days</strong> idle
           </span>
           <span className="chip">
-            goal: rep assigned within <strong>{s.sla_minutes} min</strong>
+            goal: first contact within <strong>{s.sla_minutes} min</strong>
           </span>
           <span className="chip">
             data from <strong>{generated.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</strong>
@@ -177,7 +177,7 @@ export default function Dashboard() {
             sub={`${s.matched.toLocaleString()} matched a company we already know`}
           />
           <Kpi
-            label="Typical time to assign"
+            label="Typical time to first contact"
             value={fmtMinutes(s.speed_p50)}
             sub={`9 in 10 within ${fmtMinutes(s.speed_p90)} · slowest ${fmtMinutes(s.speed_p99)}`}
           />
