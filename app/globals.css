@@ -190,14 +190,14 @@ a:hover { text-decoration: underline; }
 .pill.unrouted { background: var(--bad-soft); color: var(--bad); }
 
 /* Audit explorer */
-.controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; align-items: center; }
-.controls input, .controls select {
-  font: inherit; font-size: 13.5px; color: var(--ink);
+.controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: center; }
+.controls > input, .controls > select {
+  font: inherit; font-size: 13px; color: var(--ink);
   background: var(--panel); border: 1px solid var(--line);
-  border-radius: 8px; padding: 8px 11px;
+  border-radius: 8px; padding: 0 11px; height: 35px;
 }
-.controls input { flex: 1; min-width: 220px; }
-.controls input:focus, .controls select:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand); }
+.controls > input { flex: 1; min-width: 220px; }
+.controls > input:focus, .controls > select:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand); }
 .count-note { color: var(--ink-3); font-size: 13px; margin-left: auto; }
 
 .table-scroll { overflow-x: auto; }
@@ -239,7 +239,7 @@ table.audit tr.row-click.open td { background: var(--brand-soft); border-bottom-
 .csv-btn {
   font: inherit; font-size: 13px; font-weight: 550; color: var(--brand);
   background: var(--brand-soft); border: 0; border-radius: 8px;
-  padding: 8px 13px; cursor: pointer; white-space: nowrap;
+  padding: 0 13px; height: 35px; cursor: pointer; white-space: nowrap;
 }
 .csv-btn:hover { filter: brightness(0.97); }
 .copy-link {
@@ -255,32 +255,35 @@ table.audit tr.row-click.open td { background: var(--brand-soft); border-bottom-
 .sim-whynot strong { color: var(--ink); }
 
 /* Multi-select filter dropdowns */
-.msel { position: relative; }
+.msel { position: relative; display: flex; }
 .msel-btn {
-  font: inherit; font-size: 13.5px; color: var(--ink);
+  font: inherit; font-size: 13px; line-height: 1.2; color: var(--ink);
   background: var(--panel); border: 1px solid var(--line);
-  border-radius: 8px; padding: 8px 11px; cursor: pointer; white-space: nowrap;
+  border-radius: 8px; padding: 0 10px; height: 35px;
+  cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 5px;
 }
 .msel-btn:hover { border-color: var(--ink-3); }
 .msel-btn.active { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
-.msel-caret { color: var(--ink-3); font-size: 10px; margin-left: 2px; }
+.msel-caret { color: var(--ink-3); font-size: 9px; }
 .msel-btn.active .msel-caret { color: var(--brand); }
 .msel-panel {
-  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30;
-  min-width: 230px; max-height: 300px; overflow-y: auto;
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 30;
+  min-width: 175px; max-height: 260px; overflow-y: auto;
   background: var(--panel); border: 1px solid var(--line);
-  border-radius: 10px; box-shadow: var(--shadow); padding: 6px;
+  border-radius: 8px; box-shadow: var(--shadow); padding: 3px;
 }
 .msel-opt {
-  display: flex; gap: 9px; align-items: center; font-size: 13px;
-  padding: 7px 9px; border-radius: 7px; cursor: pointer;
+  display: flex; gap: 7px; align-items: center; font-size: 12.5px;
+  line-height: 1.2; padding: 5px 7px; border-radius: 5px; cursor: pointer;
+  white-space: nowrap;
 }
 .msel-opt:hover { background: var(--panel-2); }
-.msel-opt input { accent-color: var(--brand); }
+.msel-opt input { accent-color: var(--brand); width: 13px; height: 13px; margin: 0; flex: none; }
 .msel-clear {
-  font: inherit; font-size: 12.5px; font-weight: 550; color: var(--brand);
-  background: none; border: 0; cursor: pointer; padding: 8px 9px 5px;
-  border-top: 1px solid var(--line-2); width: 100%; text-align: left; margin-top: 4px;
+  font: inherit; font-size: 12px; font-weight: 550; color: var(--brand);
+  background: none; border: 0; cursor: pointer; padding: 5px 7px 3px;
+  border-top: 1px solid var(--line-2); width: 100%; text-align: left; margin-top: 2px;
 }
 
 /* Sortable table headers */
