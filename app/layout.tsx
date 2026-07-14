@@ -12,6 +12,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
+        <div className="suitebar">
+          <div className="wrap">
+            <a className="suite-brand" href="https://gtm-command-center-phi.vercel.app">
+              <span className="suite-mark">G</span>
+              <span>GTM Command Center</span>
+            </a>
+            <nav className="suite-mods">
+              <a className="active" href="/">Lead Routing</a>
+              <a href="https://deal-trajectory-engine.vercel.app">Deal Trajectory</a>
+            </nav>
+          </div>
+        </div>
         <header className="site-header">
           <div className="wrap">
             <Link href="/" className="brand">
